@@ -7,9 +7,12 @@ import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Settings, Users, Building2, Shield, Plus } from "lucide-react"
+import { Settings, Users, Shield, Plus, Tag, Layers } from "lucide-react"
 import { formatDate } from "@/lib/utils"
 import { UserActions } from "@/components/shared/user-actions"
+import { ExpenseCategoriesPanel } from "@/components/financial/expense-categories-panel"
+import { ProductCategoriesPanel } from "@/components/products/product-categories-panel"
+import { getAllCategories } from "@/actions/products"
 
 export const metadata: Metadata = { title: "Configurações" }
 
@@ -19,16 +22,19 @@ export default async function ConfiguracoesPage() {
     redirect("/dashboard")
   }
 
-  const users = await prisma.user.findMany({
-    where: { deletedAt: null },
-    include: { role: true },
-    orderBy: { name: "asc" },
-  })
-
-  const roles = await prisma.role.findMany({
-    include: { _count: { select: { users: true } } },
-    orderBy: { name: "asc" },
-  })
+  const [users, roles, expenseCategories, productCategories] = await Promise.all([
+    prisma.user.findMany({
+      where: { deletedAt: null },
+      include: { role: true },
+      orderBy: { name: "asc" },
+    }),
+    prisma.role.findMany({
+      include: { _count: { select: { users: true } } },
+      orderBy: { name: "asc" },
+    }),
+    prisma.expenseCategory.findMany({ orderBy: [{ isActive: "desc" }, { name: "asc" }] }),
+    getAllCategories(),
+  ])
 
   return (
     <div className="p-6 space-y-6">
@@ -89,7 +95,7 @@ export default async function ConfiguracoesPage() {
                       {formatDate(user.createdAt)}
                     </td>
                     <td className="py-3 px-2">
-                      <UserActions userId={user.id} currentUserId={session.user.id} />
+                      <UserActions userId={user.id} />
                     </td>
                   </tr>
                 ))}
@@ -121,6 +127,34 @@ export default async function ConfiguracoesPage() {
               </div>
             ))}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Categorias de Despesa */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Tag size={16} /> Categorias de Despesa
+          </CardTitle>
+          <CardDescription>Organize as contas a pagar por categorias com cores</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ExpenseCategoriesPanel categories={expenseCategories} />
+        </CardContent>
+      </Card>
+
+      {/* Categorias de Produtos */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Layers size={16} /> Categorias de Produtos
+          </CardTitle>
+          <CardDescription>
+            Organize o catálogo por categoria — defina nome, descrição e ordem de exibição
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ProductCategoriesPanel categories={productCategories} />
         </CardContent>
       </Card>
     </div>

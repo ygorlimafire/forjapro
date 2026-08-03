@@ -32,6 +32,7 @@ export function CustomerForm({ customer }: CustomerFormProps) {
     control,
     formState: { errors, isSubmitting },
   } = useForm<CustomerFormData>({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(customerSchema) as any,
     defaultValues: customer
       ? {

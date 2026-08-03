@@ -1,4 +1,4 @@
-import { PrismaClient, CustomerType, LeadSource, LeadStatus, ActivityType } from "@prisma/client"
+import { PrismaClient, CustomerType, LeadSource, LeadStatus, ActivityType, SupplierType, ExpenseCategoryType } from "@prisma/client"
 import bcrypt from "bcryptjs"
 
 const prisma = new PrismaClient()
@@ -156,39 +156,172 @@ async function main() {
       phone: "(11) 3456-7890",
       email: "contato@forjapro.com.br",
       website: "www.forjapro.com.br",
+      proposalSequence: 0,
+      purchaseSequence: 0,
+      minMarginPct: 15,
+      bankInfo: { banco: "", agencia: "", conta: "", pix: "" },
     },
   })
   console.log("  ✓ Configurações da empresa")
 
+  // ── Fornecedor principal: TRAMA ───────────────────────────────────────────
+  await prisma.supplier.upsert({
+    where: { id: "supplier-trama" },
+    update: {
+      type: SupplierType.PRODUTO,
+      country: "BR",
+      currency: "BRL",
+      avgLeadDays: 30,
+      commercialTerms: "Pagamento: 28 dias após a NF. Frete: CIF para pedidos acima de R$ 5.000.",
+    },
+    create: {
+      id: "supplier-trama",
+      type: SupplierType.PRODUTO,
+      companyName: "Trama Equipamentos Industriais Ltda",
+      tradeName: "Trama",
+      document: "00.000.000/0001-00",
+      country: "BR",
+      currency: "BRL",
+      contactName: "Comercial Trama",
+      phone: "(11) 9999-0000",
+      email: "comercial@trama.com.br",
+      avgLeadDays: 30,
+      commercialTerms: "Pagamento: 28 dias após a NF. Frete: CIF para pedidos acima de R$ 5.000.",
+      isActive: true,
+    },
+  })
+  console.log("  ✓ Fornecedor Trama cadastrado")
+
+  // ── Categorias de despesa padrão ──────────────────────────────────────────
+  const expenseCategories = [
+    { name: "Aluguel", type: ExpenseCategoryType.FIXA, color: "#6366F1" },
+    { name: "Folha de Pagamento", type: ExpenseCategoryType.FIXA, color: "#8B5CF6" },
+    { name: "Energia Elétrica", type: ExpenseCategoryType.VARIAVEL, color: "#F59E0B" },
+    { name: "Telefone / Internet", type: ExpenseCategoryType.FIXA, color: "#0EA5E9" },
+    { name: "Marketing", type: ExpenseCategoryType.VARIAVEL, color: "#EC4899" },
+    { name: "Impostos e Taxas", type: ExpenseCategoryType.FIXA, color: "#EF4444" },
+    { name: "Serviços Terceiros", type: ExpenseCategoryType.VARIAVEL, color: "#14B8A6" },
+    { name: "Manutenção", type: ExpenseCategoryType.VARIAVEL, color: "#F97316" },
+    { name: "Frete / Logística", type: ExpenseCategoryType.VARIAVEL, color: "#84CC16" },
+    { name: "Outros", type: ExpenseCategoryType.VARIAVEL, color: "#6B7280" },
+  ]
+  for (const ec of expenseCategories) {
+    await prisma.expenseCategory.upsert({
+      where: { name: ec.name },
+      update: {},
+      create: ec,
+    })
+  }
+  console.log(`  ✓ ${expenseCategories.length} categorias de despesa padrão`)
+
+  // ── Termos comerciais padrão ──────────────────────────────────────────────
+  const termsData = [
+    {
+      key: "1.0",
+      title: "Prazo de Entrega",
+      content: "O prazo de entrega é de 30 (trinta) dias úteis para mobiliário e 45 (quarenta e cinco) dias úteis para equipamentos, a partir da confirmação do pedido e recebimento do sinal/aprovação.",
+      order: 1,
+    },
+    {
+      key: "1.1",
+      title: "Alterações de Projeto e Desenhos",
+      content: "Qualquer alteração no projeto após aprovação dos desenhos técnicos implicará em revisão de prazo e valores, a ser negociada entre as partes. Não serão aceitas alterações após início da produção.",
+      order: 2,
+    },
+    {
+      key: "2.0",
+      title: "Condições de Pagamento",
+      content: "As condições de pagamento são as estabelecidas neste orçamento. Transferência bancária (TED/PIX) para os dados abaixo:\n\nBanco: \nAgência: \nConta Corrente: \nPIX: ",
+      order: 3,
+    },
+    {
+      key: "2.1",
+      title: "Reajustamento",
+      content: "Os preços constantes neste orçamento são válidos pelo período indicado na data de validade. Após o vencimento, os valores estarão sujeitos a reajuste conforme variação dos custos de aquisição e fornecimento.",
+      order: 4,
+    },
+    {
+      key: "3.0",
+      title: "Entrega / Instalação",
+      content: "A entrega será realizada no endereço indicado pelo cliente. O valor do frete, quando aplicável, está destacado neste orçamento. A instalação, quando prevista, será agendada após a entrega e requer acesso livre e adequado ao local, fornecimento de energia e infraestrutura necessária.",
+      order: 5,
+    },
+    {
+      key: "4.0",
+      title: "Não Incluso no Orçamento",
+      content: "Não estão inclusos neste orçamento: obra civil, infraestrutura elétrica, hidráulica e de gás, adequações do local, licenças e alvarás, materiais de consumo e quaisquer outros itens não expressamente mencionados.",
+      order: 6,
+    },
+    {
+      key: "5.0",
+      title: "Garantia FORJA PRO",
+      content: "A FORJA PRO oferece garantia de 12 (doze) meses contra defeitos de fabricação a partir da data de entrega/instalação, conforme Código de Defesa do Consumidor. A garantia não cobre: mau uso, instalação incorreta por terceiros, negligência, acidentes, desgaste natural ou ausência de manutenção preventiva.",
+      order: 7,
+    },
+    {
+      key: "6.0",
+      title: "Obrigações do Cliente",
+      content: "Compete ao cliente: (a) garantir acesso livre ao local de entrega e instalação; (b) providenciar infraestrutura elétrica, hidráulica e de gás conforme especificações técnicas dos equipamentos; (c) designar responsável para recebimento e conferência dos produtos; (d) efetuar os pagamentos nos prazos acordados.",
+      order: 8,
+    },
+    {
+      key: "7.0",
+      title: "Obrigações da FORJA PRO",
+      content: "A FORJA PRO compromete-se a: (a) fornecer os equipamentos nas especificações descritas neste orçamento; (b) cumprir os prazos acordados, salvo força maior devidamente comunicada; (c) prestar assistência técnica no período de garantia; (d) emitir nota fiscal para todos os produtos fornecidos.",
+      order: 9,
+    },
+    {
+      key: "8.0",
+      title: "Validade da Proposta",
+      content: "Esta proposta é válida pelo período indicado na data de validade acima. Após o vencimento, os valores e condições poderão ser revistos. A confirmação do pedido deverá ser realizada por escrito (e-mail, WhatsApp ou assinatura deste documento).",
+      order: 10,
+    },
+  ]
+
+  for (const term of termsData) {
+    await prisma.companyTerms.upsert({
+      where: { key: term.key },
+      update: { title: term.title, content: term.content, order: term.order },
+      create: term,
+    })
+  }
+  console.log(`  ✓ ${termsData.length} termos comerciais padrão`)
+
   // ── Categorias de produtos ────────────────────────────────────────────────
   const categoriesData = [
-    { name: "Fogões e Fornos", description: "Fogões industriais, fornos combinados e fornos de convecção" },
-    { name: "Refrigeração", description: "Câmaras frias, refrigeradores e expositores" },
-    { name: "Preparo de Alimentos", description: "Processadores, batedeiras e misturadores industriais" },
-    { name: "Frituras", description: "Fritadeiras industriais e chapas de contato" },
-    { name: "Lavagem", description: "Lavadoras de louça e equipamentos de higienização" },
-    { name: "Ventilação", description: "Coifas, exaustores e sistemas de ventilação" },
-    { name: "Bancadas e Pias", description: "Bancadas em aço inox e pias industriais" },
-    { name: "Churrasco e Grelhados", description: "Churrasqueiras, grelhas e fornos a lenha" },
+    { name: "Cocção Gás",          description: "Fogões industriais e chapas a gás",                       sortOrder: 1 },
+    { name: "Cocção Elétrica",     description: "Fornos combinados e equipamentos de cocção elétrica",      sortOrder: 2 },
+    { name: "Refrigeração",        description: "Câmaras frias, refrigeradores e conservadores",            sortOrder: 3 },
+    { name: "Preparação/Bancadas", description: "Processadores, bancadas inox e equipamentos de preparo",   sortOrder: 4 },
+    { name: "Fritura",             description: "Fritadeiras industriais e chapas de contato",              sortOrder: 5 },
+    { name: "Exaustão/Ventilação", description: "Coifas, exaustores e sistemas de ventilação",              sortOrder: 6 },
+    { name: "Lavagem",             description: "Lavadoras de louça e equipamentos de higienização",        sortOrder: 7 },
+    { name: "Buffet/Self-service", description: "Balcões térmicos, módulos de saída e expositores",         sortOrder: 8 },
+    { name: "Grelhados",           description: "Churrasqueiras, grelhas e fornos a lenha",                 sortOrder: 9 },
   ]
 
   const categoryMap: Record<string, string> = {}
   for (const cat of categoriesData) {
     const c = await prisma.productCategory.upsert({
       where: { name: cat.name },
-      update: {},
-      create: cat,
+      update: { description: cat.description, sortOrder: cat.sortOrder, isActive: true },
+      create: { ...cat, isActive: true },
     })
     categoryMap[cat.name] = c.id
   }
+  // Desativar categorias legadas não presentes no novo seed
+  await prisma.productCategory.updateMany({
+    where: { name: { notIn: categoriesData.map((c) => c.name) }, isActive: true },
+    data: { isActive: false },
+  })
   console.log(`  ✓ ${categoriesData.length} categorias de produtos`)
 
-  // ── Produtos de exemplo (catálogo TRAMA) ─────────────────────────────────
+  // ── Produtos de exemplo (catálogo FORJA PRO) ───────��──────────────────
   const productsData = [
     {
       sku: "FP-FOG-001",
       name: "Fogão Industrial 6 Bocas Standard",
-      categoryId: categoryMap["Fogões e Fornos"],
+      categoryId: categoryMap["Cocção Gás"],
       description: "Fogão industrial de 6 bocas com dupla grade, forno duplo e mesa lisa. Ideal para restaurantes e lanchonetes de médio porte.",
       listPrice: 4890.00,
       costPrice: 2850.00,
@@ -206,7 +339,7 @@ async function main() {
     {
       sku: "FP-FOG-002",
       name: "Fogão Industrial 4 Bocas Compacto",
-      categoryId: categoryMap["Fogões e Fornos"],
+      categoryId: categoryMap["Cocção Gás"],
       description: "Fogão industrial compacto de 4 bocas, perfeito para cozinhas menores. Alta potência e baixo consumo de gás.",
       listPrice: 3290.00,
       costPrice: 1890.00,
@@ -224,7 +357,7 @@ async function main() {
     {
       sku: "FP-FOR-001",
       name: "Forno Combinado 10 GN 1/1",
-      categoryId: categoryMap["Fogões e Fornos"],
+      categoryId: categoryMap["Cocção Elétrica"],
       description: "Forno combinado profissional com capacidade para 10 GN 1/1. Modos vapor, ar quente e combinado. Display digital touchscreen.",
       listPrice: 18900.00,
       costPrice: 11200.00,
@@ -278,7 +411,7 @@ async function main() {
     {
       sku: "FP-FRITS-001",
       name: "Fritadeira Industrial 30L Dupla",
-      categoryId: categoryMap["Frituras"],
+      categoryId: categoryMap["Fritura"],
       description: "Fritadeira industrial com 2 cubas de 15L cada, resistência blindada e termostato de segurança. Alta produtividade para fast-food.",
       listPrice: 3450.00,
       costPrice: 1980.00,
@@ -314,7 +447,7 @@ async function main() {
     {
       sku: "FP-PREP-001",
       name: "Processador de Alimentos 10L",
-      categoryId: categoryMap["Preparo de Alimentos"],
+      categoryId: categoryMap["Preparação/Bancadas"],
       description: "Processador industrial com tigela de 10L, 12 velocidades e variados discos de corte incluso. Motor de 550W.",
       listPrice: 2890.00,
       costPrice: 1650.00,
@@ -332,7 +465,7 @@ async function main() {
     {
       sku: "FP-BAN-001",
       name: "Bancada de Trabalho Inox 1,5m",
-      categoryId: categoryMap["Bancadas e Pias"],
+      categoryId: categoryMap["Preparação/Bancadas"],
       description: "Bancada profissional em aço inox AISI 304 com prateleira inferior, borda de proteção e pés reguláveis.",
       listPrice: 1290.00,
       costPrice: 720.00,
@@ -350,7 +483,7 @@ async function main() {
     {
       sku: "FP-COI-001",
       name: "Coifa Industrial 2m com Motor",
-      categoryId: categoryMap["Ventilação"],
+      categoryId: categoryMap["Exaustão/Ventilação"],
       description: "Coifa industrial de 2 metros com motor acoplado, filtros de alumínio laváveis e iluminação LED. Vazão 3.000 m³/h.",
       listPrice: 4200.00,
       costPrice: 2400.00,
@@ -370,7 +503,7 @@ async function main() {
   for (const prod of productsData) {
     await prisma.product.upsert({
       where: { sku: prod.sku },
-      update: {},
+      update: { categoryId: prod.categoryId },
       create: {
         ...prod,
         listPrice: prod.listPrice,

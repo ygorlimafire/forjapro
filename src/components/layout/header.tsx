@@ -1,6 +1,5 @@
 "use client"
 
-import { signOut } from "next-auth/react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
   DropdownMenu,
@@ -13,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { LogOut, User, Bell } from "lucide-react"
 import { getInitials } from "@/lib/utils"
+import { handleSignOut } from "@/actions/auth"
 
 interface HeaderProps {
   userName: string
@@ -60,7 +60,7 @@ export function Header({ userName, userEmail, userRole }: HeaderProps) {
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className="text-destructive"
-              onClick={() => signOut({ callbackUrl: "/login" })}
+              onClick={() => handleSignOut()}
             >
               <LogOut size={14} />
               Sair

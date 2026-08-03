@@ -58,14 +58,18 @@ model User {
   updatedAt     DateTime  @updatedAt
   deletedAt     DateTime?
 
-  role          Role          @relation(fields: [roleId], references: [id])
-  accounts      Account[]
-  sessions      Session[]
-  auditLogs     AuditLog[]
-  activities    Activity[]
-  assignedLeads Lead[]        @relation("LeadAssignee")
-  opportunities Opportunity[] @relation("OpportunityAssignee")
-  stageHistory  OpportunityStageHistory[]
+  role              Role                      @relation(fields: [roleId], references: [id])
+  accounts          Account[]
+  sessions          Session[]
+  auditLogs         AuditLog[]
+  activities        Activity[]
+  assignedLeads     Lead[]                    @relation("LeadAssignee")
+  opportunities     Opportunity[]             @relation("OpportunityAssignee")
+  stageHistory      OpportunityStageHistory[]
+  stockMovements    StockMovement[]
+  ordersSold        SalesOrder[]              @relation("OrderSeller")
+  proposalsApproved SalesProposal[]           @relation("ProposalApprover")
+  proposalsSold     SalesProposal[]           @relation("ProposalSeller")
 }
 
 model Role {
@@ -121,22 +125,37 @@ model AuditLog {
 // ─── COMPANY SETTINGS ─────────────────────────────────────────────────────────
 
 model CompanySettings {
-  id           String   @id @default(cuid())
-  name         String   @default("FORJA PRO")
-  cnpj         String?
-  street       String?
-  number       String?
-  complement   String?
-  neighborhood String?
-  city         String?
-  state        String?
-  zipCode      String?
-  phone        String?
-  email        String?
-  website      String?
-  logo         String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id               String   @id @default(cuid())
+  name             String   @default("FORJA PRO")
+  cnpj             String?
+  street           String?
+  number           String?
+  complement       String?
+  neighborhood     String?
+  city             String?
+  state            String?
+  zipCode          String?
+  phone            String?
+  email            String?
+  website          String?
+  logo             String?
+  proposalSequence Int      @default(0)
+  purchaseSequence Int      @default(0)
+  minMarginPct     Decimal  @default(0) @db.Decimal(5, 2)
+  bankInfo         Json?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model CompanyTerms {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  title     String
+  content   String   @db.Text
+  order     Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // ─── CUSTOMERS ────────────────────────────────────────────────────────────────
@@ -171,6 +190,10 @@ model Customer {
   contacts      Contact[]
   leads         Lead[]
   opportunities Opportunity[]
+  proposals     SalesProposal[]
+  orders        SalesOrder[]
+  receivables   AccountReceivable[]
+  stockUnits    StockUnit[]
 }
 
 model Contact {
@@ -194,6 +217,8 @@ model ProductCategory {
   id          String   @id @default(cuid())
   name        String   @unique
   description String?
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -212,13 +237,20 @@ model Product {
   costPrice      Decimal   @db.Decimal(10, 2)
   desiredMargin  Decimal?  @db.Decimal(5, 2)
   warranty       String?
+  stockMin       Int       @default(0)
   isActive       Boolean   @default(true)
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
   deletedAt      DateTime?
 
-  category ProductCategory @relation(fields: [categoryId], references: [id])
-  images   ProductImage[]
+  category      ProductCategory @relation(fields: [categoryId], references: [id])
+  images        ProductImage[]
+  productStocks ProductStock[]
+  stockMovements StockMovement[]
+  stockUnits    StockUnit[]
+  proposalItems SalesProposalItem[]
+  orderItems    SalesOrderItem[]
+  purchaseItems PurchaseOrderItem[]
 }
 
 model ProductImage {
@@ -231,6 +263,179 @@ model ProductImage {
   createdAt DateTime @default(now())
 
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+// ─── SUPPLIERS ────────────────────────────────────────────────────────────────
+
+enum SupplierType {
+  PRODUTO
+  SERVICO
+  DESPESA_FIXA
+  OUTRO
+}
+
+enum PaymentMethod {
+  PIX
+  BOLETO
+  TRANSFERENCIA
+  CARTAO
+  SWIFT
+  CHEQUE
+}
+
+enum Currency {
+  BRL
+  USD
+  EUR
+  CNY
+  GBP
+}
+
+model Supplier {
+  id               String         @id @default(cuid())
+  type             SupplierType   @default(PRODUTO)
+  companyName      String
+  tradeName        String?
+  document         String?
+  taxId            String?
+  country          String         @default("BR")
+  contactName      String?
+  phone            String?
+  email            String?
+  site             String?
+  street           String?
+  number           String?
+  complement       String?
+  neighborhood     String?
+  city             String?
+  state            String?
+  zipCode          String?
+  preferredPayment PaymentMethod?
+  currency         Currency       @default(BRL)
+  bank             String?
+  bankAgency       String?
+  bankAccount      String?
+  bankIban         String?
+  pixKey           String?
+  avgLeadDays      Int?
+  avgPaymentDays   Int?
+  volumeDiscountPct Decimal?      @db.Decimal(5, 2)
+  commercialTerms  String?        @db.Text
+  notes            String?        @db.Text
+  isActive         Boolean        @default(true)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  purchaseOrders PurchaseOrder[]
+  payables       AccountPayable[]
+}
+
+// ─── WAREHOUSE & STOCK ────────────────────────────────────────────────────────
+
+model Warehouse {
+  id        String   @id @default(cuid())
+  name      String
+  isDefault Boolean  @default(false)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  productStocks  ProductStock[]
+  stockMovements StockMovement[]
+  stockUnits     StockUnit[]
+  reservations   StockReservation[]
+}
+
+model ProductStock {
+  id           String   @id @default(cuid())
+  productId    String
+  warehouseId  String
+  physicalQty  Int      @default(0)
+  reservedQty  Int      @default(0)
+  availableQty Int      @default(0)
+  avgCost      Decimal  @default(0) @db.Decimal(10, 2)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  product   Product   @relation(fields: [productId], references: [id])
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id])
+
+  @@unique([productId, warehouseId])
+}
+
+enum StockMovementType {
+  ENTRADA
+  SAIDA
+  AJUSTE
+  PERDA
+  DEVOLUCAO
+}
+
+model StockMovement {
+  id            String            @id @default(cuid())
+  productId     String
+  warehouseId   String
+  type          StockMovementType
+  quantity      Int
+  unitCost      Decimal?          @db.Decimal(10, 2)
+  totalCost     Decimal?          @db.Decimal(10, 2)
+  reason        String?
+  serialNumber  String?
+  referenceType String?
+  referenceId   String?
+  userId        String
+  createdAt     DateTime          @default(now())
+
+  product   Product   @relation(fields: [productId], references: [id])
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id])
+  user      User      @relation(fields: [userId], references: [id])
+}
+
+enum StockUnitStatus {
+  EM_ESTOQUE
+  VENDIDO
+  GARANTIA
+  PERDA
+}
+
+model StockUnit {
+  id           String          @id @default(cuid())
+  productId    String
+  warehouseId  String
+  serialNumber String
+  status       StockUnitStatus @default(EM_ESTOQUE)
+  orderId      String?
+  customerId   String?
+  soldAt       DateTime?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  product   Product   @relation(fields: [productId], references: [id])
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id])
+  order     SalesOrder? @relation(fields: [orderId], references: [id])
+  customer  Customer?   @relation(fields: [customerId], references: [id])
+
+  @@unique([serialNumber, productId])
+}
+
+enum ReservationStatus {
+  ATIVA
+  BAIXADA
+  CANCELADA
+}
+
+model StockReservation {
+  id          String            @id @default(cuid())
+  productId   String
+  warehouseId String
+  orderId     String
+  quantity    Int
+  status      ReservationStatus @default(ATIVA)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  warehouse Warehouse  @relation(fields: [warehouseId], references: [id])
+  order     SalesOrder @relation(fields: [orderId], references: [id])
 }
 
 // ─── CRM ──────────────────────────────────────────────────────────────────────
@@ -330,6 +535,7 @@ model Opportunity {
   assignee     User?         @relation("OpportunityAssignee", fields: [assignedTo], references: [id])
   activities   Activity[]
   stageHistory OpportunityStageHistory[]
+  proposals    SalesProposal[]
 }
 
 model OpportunityStageHistory {
@@ -363,4 +569,294 @@ model Activity {
   lead        Lead?        @relation(fields: [leadId], references: [id])
   opportunity Opportunity? @relation(fields: [opportunityId], references: [id])
   user        User         @relation(fields: [userId], references: [id])
+}
+
+// ─── PROPOSALS ────────────────────────────────────────────────────────────────
+
+enum ProposalStatus {
+  RASCUNHO
+  ENVIADA
+  EM_NEGOCIACAO
+  APROVADA
+  RECUSADA
+  VENCIDA
+  CANCELADA
+}
+
+model SalesProposal {
+  id               String         @id @default(cuid())
+  number           String         @unique
+  sequentialNumber Int
+  customerId       String
+  opportunityId    String?
+  userId           String
+  nature           String
+  validityDays     Int
+  validityDate     DateTime
+  paymentCondition String?
+  installments     Int?
+  installmentDueDates String[]
+  freight          Decimal        @default(0) @db.Decimal(10, 2)
+  totalProducts    Decimal        @db.Decimal(10, 2)
+  totalAmount      Decimal        @db.Decimal(10, 2)
+  estimatedMargin  Decimal?       @db.Decimal(10, 2)
+  estimatedMarginPct Decimal?     @db.Decimal(5, 2)
+  minMarginPct     Decimal        @default(0) @db.Decimal(5, 2)
+  notes            String?        @db.Text
+  additionalInfo   String?        @db.Text
+  status           ProposalStatus @default(RASCUNHO)
+  frozenAt         DateTime?
+  approvedById     String?
+  approvedAt       DateTime?
+  sentAt           DateTime?
+  rejectedAt       DateTime?
+  rejectionReason  String?        @db.Text
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  deletedAt        DateTime?
+
+  customer    Customer      @relation(fields: [customerId], references: [id])
+  opportunity Opportunity?  @relation(fields: [opportunityId], references: [id])
+  seller      User          @relation("ProposalSeller", fields: [userId], references: [id])
+  approvedBy  User?         @relation("ProposalApprover", fields: [approvedById], references: [id])
+  items       SalesProposalItem[]
+  order       SalesOrder?
+}
+
+model SalesProposalItem {
+  id                 String   @id @default(cuid())
+  proposalId         String
+  productId          String
+  position           Int      @default(0)
+  productName        String
+  productSku         String
+  productImage       String?
+  productDescription String?  @db.Text
+  technicalSpecs     Json?
+  listPrice          Decimal  @db.Decimal(10, 2)
+  costPrice          Decimal  @db.Decimal(10, 2)
+  ipiPct             Decimal  @default(0) @db.Decimal(5, 2)
+  discountPct        Decimal  @default(0) @db.Decimal(5, 2)
+  netPrice           Decimal  @db.Decimal(10, 2)
+  quantity           Int
+  subtotal           Decimal  @db.Decimal(10, 2)
+  estimatedMargin    Decimal? @db.Decimal(10, 2)
+  estimatedMarginPct Decimal? @db.Decimal(5, 2)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  proposal SalesProposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  product  Product       @relation(fields: [productId], references: [id])
+}
+
+// ─── ORDERS ───────────────────────────────────────────────────────────────────
+
+enum OrderStatus {
+  PENDENTE
+  CONFIRMADO
+  AGUARDANDO_EXPEDICAO
+  ENTREGUE
+  CANCELADO
+}
+
+enum StockAlertStatus {
+  OK
+  PARCIAL
+  INSUFICIENTE
+}
+
+model SalesOrder {
+  id          String      @id @default(cuid())
+  proposalId  String      @unique
+  customerId  String
+  userId      String
+  status      OrderStatus      @default(PENDENTE)
+  stockStatus StockAlertStatus @default(OK)
+  totalAmount Decimal     @db.Decimal(10, 2)
+  notes       String?     @db.Text
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  proposal     SalesProposal      @relation(fields: [proposalId], references: [id])
+  customer     Customer           @relation(fields: [customerId], references: [id])
+  seller       User               @relation("OrderSeller", fields: [userId], references: [id])
+  items        SalesOrderItem[]
+  receivables  AccountReceivable[]
+  reservations StockReservation[]
+  stockUnits   StockUnit[]
+  purchaseOrders PurchaseOrder[]  @relation("PurchaseOrderToSalesOrder")
+}
+
+model SalesOrderItem {
+  id        String   @id @default(cuid())
+  orderId   String
+  productId String
+  quantity  Int
+  unitPrice Decimal  @db.Decimal(10, 2)
+  subtotal  Decimal  @db.Decimal(10, 2)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  order   SalesOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product    @relation(fields: [productId], references: [id])
+}
+
+// ─── FINANCEIRO ───────────────────────────────────────────────────────────────
+
+enum ReceivableStatus {
+  PENDENTE
+  PAGO
+  VENCIDO
+  CANCELADO
+}
+
+model AccountReceivable {
+  id                String           @id @default(cuid())
+  orderId           String?
+  customerId        String?
+  description       String?
+  installment       Int      @default(1)
+  totalInstallments Int      @default(1)
+  amount            Decimal          @db.Decimal(10, 2)
+  originalAmount    Decimal?         @db.Decimal(10, 2)
+  dueDate           DateTime
+  originalDueDate   DateTime?
+  status            ReceivableStatus @default(PENDENTE)
+  paidAt            DateTime?
+  paymentMethod     String?
+  bankAccountId     String?
+  proofUrl          String?
+  discountPct       Decimal?         @db.Decimal(5, 2)
+  lateFeePerDay     Decimal?         @db.Decimal(5, 2)
+  notes             String?          @db.Text
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  order       SalesOrder?  @relation(fields: [orderId], references: [id])
+  customer    Customer?    @relation(fields: [customerId], references: [id])
+  bankAccount BankAccount? @relation(fields: [bankAccountId], references: [id])
+}
+
+enum PayableStatus {
+  PENDENTE
+  PAGO
+  VENCIDO
+  CANCELADO
+}
+
+enum CostCenter {
+  COMERCIAL
+  ADMINISTRATIVO
+  OPERACIONAL
+}
+
+model AccountPayable {
+  id                  String        @id @default(cuid())
+  purchaseOrderId     String?
+  supplierId          String?
+  categoryId          String?
+  category            String?
+  description         String?
+  amount              Decimal       @db.Decimal(10, 2)
+  dueDate             DateTime
+  status              PayableStatus @default(PENDENTE)
+  paidAt              DateTime?
+  bankAccountId       String?
+  proofUrl            String?
+  notes               String?       @db.Text
+  costCenter          CostCenter?
+  isRecurring         Boolean       @default(false)
+  installment         Int           @default(1)
+  totalInstallments   Int           @default(1)
+  installmentGroupId  String?
+  attachmentUrl       String?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  purchaseOrder   PurchaseOrder?  @relation(fields: [purchaseOrderId], references: [id])
+  supplier        Supplier?       @relation(fields: [supplierId], references: [id])
+  expenseCategory ExpenseCategory? @relation(fields: [categoryId], references: [id])
+  bankAccount     BankAccount?    @relation(fields: [bankAccountId], references: [id])
+}
+
+enum BankAccountType {
+  CONTA_CORRENTE
+  POUPANCA
+  CAIXA
+}
+
+model BankAccount {
+  id             String          @id @default(cuid())
+  name           String
+  type           BankAccountType @default(CONTA_CORRENTE)
+  initialBalance Decimal         @default(0) @db.Decimal(10, 2)
+  isActive       Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  receivables AccountReceivable[]
+  payables    AccountPayable[]
+}
+
+enum ExpenseCategoryType {
+  FIXA
+  VARIAVEL
+}
+
+model ExpenseCategory {
+  id        String              @id @default(cuid())
+  name      String
+  type      ExpenseCategoryType @default(VARIAVEL)
+  color     String              @default("#6B7280")
+  isActive  Boolean             @default(true)
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+
+  payables AccountPayable[]
+
+  @@unique([name])
+}
+
+// ─── PURCHASES ────────────────────────────────────────────────────────────────
+
+enum PurchaseOrderStatus {
+  RASCUNHO
+  ENVIADO
+  CONFIRMADO
+  RECEBIDO_PARCIAL
+  RECEBIDO_TOTAL
+  CANCELADO
+}
+
+model PurchaseOrder {
+  id               String              @id @default(cuid())
+  number           String              @unique
+  sequentialNumber Int
+  supplierId       String
+  status           PurchaseOrderStatus @default(RASCUNHO)
+  expectedAt       DateTime?
+  notes            String?             @db.Text
+  totalAmount      Decimal             @db.Decimal(10, 2)
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  supplier    Supplier           @relation(fields: [supplierId], references: [id])
+  items       PurchaseOrderItem[]
+  payables    AccountPayable[]
+  salesOrders SalesOrder[]       @relation("PurchaseOrderToSalesOrder")
+}
+
+model PurchaseOrderItem {
+  id              String   @id @default(cuid())
+  purchaseOrderId String
+  productId       String
+  quantity        Int
+  unitCost        Decimal  @db.Decimal(10, 2)
+  subtotal        Decimal  @db.Decimal(10, 2)
+  receivedQty     Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  product       Product       @relation(fields: [productId], references: [id])
 }

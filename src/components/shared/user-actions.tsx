@@ -12,10 +12,9 @@ import { MoreHorizontal, Pencil } from "lucide-react"
 
 interface Props {
   userId: string
-  currentUserId: string
 }
 
-export function UserActions({ userId, currentUserId: _currentUserId }: Props) {
+export function UserActions({ userId }: Props) {
   const router = useRouter()
   return (
     <DropdownMenu>

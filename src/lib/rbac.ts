@@ -18,6 +18,7 @@ export const ACTIONS = {
   EDIT: "edit",
   DELETE: "delete",
   EXPORT: "export",
+  APPROVE: "approve",
 } as const
 
 export const ROLES = {
@@ -33,9 +34,6 @@ export function hasPermission(
   module: string,
   action: string
 ): boolean {
-  if (userPermissions.includes(`${MODULES.CONFIGURACOES}:${ACTIONS.VIEW}`)) {
-    // admin tem acesso total — verificado pelo roleName no middleware
-  }
   return userPermissions.includes(`${module}:${action}`)
 }
 
@@ -43,7 +41,6 @@ export function can(permissions: string[], module: string, action: string) {
   return permissions.includes(`${module}:${action}`)
 }
 
-// Permissões padrão por papel
 export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
   ADMIN: Object.values(MODULES).flatMap((m) =>
     Object.values(ACTIONS).map((a) => `${m}:${a}`)
@@ -52,7 +49,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
     "dashboard:view",
     "crm:view", "crm:create", "crm:edit", "crm:delete",
     "clientes:view", "clientes:create", "clientes:edit",
-    "propostas:view", "propostas:create", "propostas:edit",
+    "propostas:view", "propostas:create", "propostas:edit", "propostas:approve",
     "pedidos:view", "pedidos:create", "pedidos:edit",
     "produtos:view",
     "estoque:view",

@@ -1,5 +1,13 @@
 import { z } from "zod"
 
+export const productCategorySchema = z.object({
+  name: z.string().min(1, "Nome obrigatório").max(80),
+  description: z.string().optional(),
+  sortOrder: z.number().int().min(0).optional(),
+})
+
+export type ProductCategoryFormData = z.infer<typeof productCategorySchema>
+
 export const productSchema = z.object({
   sku: z.string().min(1, "SKU obrigatório").max(50),
   name: z.string().min(2, "Nome obrigatório"),

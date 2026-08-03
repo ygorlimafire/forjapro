@@ -4,7 +4,6 @@ import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { cn, formatCurrency, formatDate } from "@/lib/utils"
 import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Building2, User, Calendar, DollarSign, GripVertical } from "lucide-react"
 
 interface Opportunity {

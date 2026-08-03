@@ -30,7 +30,8 @@ export async function createCustomer(formData: unknown): Promise<ActionResult<{ 
       data: {
         ...customerData,
         contacts: {
-          create: contacts.map(({ id: _id, ...c }) => c),
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          create: contacts.map(({ id: _omitId, ...c }) => c),
         },
       },
     })

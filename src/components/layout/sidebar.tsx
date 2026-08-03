@@ -18,6 +18,7 @@ import {
   TrendingUp,
   ChevronLeft,
   ChevronRight,
+  Truck,
 } from "lucide-react"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
@@ -43,6 +44,7 @@ const navItems = [
   { title: "Produtos", href: "/produtos", icon: Package, module: "produtos" },
   { title: "Estoque", href: "/estoque", icon: Warehouse, module: "estoque" },
   { title: "Compras", href: "/compras", icon: TrendingUp, module: "compras" },
+  { title: "Fornecedores", href: "/fornecedores", icon: Truck, module: "compras" },
   { title: "Financeiro", href: "/financeiro", icon: DollarSign, module: "financeiro" },
   { title: "Relatórios", href: "/relatorios", icon: BarChart3, module: "relatorios" },
   { title: "Configurações", href: "/configuracoes", icon: Settings, module: "configuracoes" },

@@ -42,6 +42,7 @@ export function NewOpportunityDialog({ stages, customers }: Props) {
   const router = useRouter()
 
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<FormData>({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(schema) as any,
   })
 

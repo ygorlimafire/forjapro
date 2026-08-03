@@ -13,6 +13,12 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+  {
+    rules: {
+      // react-hook-form's watch() is a known React Compiler incompatibility; not actionable here.
+      "react-hooks/incompatible-library": "off",
+    },
+  },
 ]);
 
 export default eslintConfig;

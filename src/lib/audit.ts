@@ -8,6 +8,10 @@ type AuditAction =
   | "DELETE"
   | "RESTORE"
   | "PERMISSION_CHANGE"
+  | "APPROVE"
+  | "REJECT"
+  | "SEND"
+  | "DUPLICATE"
 
 interface AuditParams {
   userId: string

@@ -12,12 +12,13 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
+import { ImageUpload } from "@/components/products/image-upload"
 import { Save, Loader2 } from "lucide-react"
 import { formatCurrency, calculateMargin } from "@/lib/utils"
-import type { Product, ProductCategory } from "@prisma/client"
+import type { Product, ProductCategory, ProductImage } from "@prisma/client"
 
 interface ProductFormProps {
-  product?: Product
+  product?: Product & { images?: ProductImage[] }
   categories: ProductCategory[]
 }
 
@@ -32,6 +33,7 @@ export function ProductForm({ product, categories }: ProductFormProps) {
     setValue,
     formState: { errors, isSubmitting },
   } = useForm<ProductFormData>({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(productSchema) as any,
     defaultValues: product
       ? {
@@ -51,6 +53,7 @@ export function ProductForm({ product, categories }: ProductFormProps) {
 
   const listPrice = watch("listPrice") || 0
   const costPrice = watch("costPrice") || 0
+  const mainImage = watch("mainImage")
   const realMargin = calculateMargin(listPrice, costPrice)
 
   async function onSubmit(data: ProductFormData) {
@@ -60,7 +63,11 @@ export function ProductForm({ product, categories }: ProductFormProps) {
 
     if (result.success) {
       toast.success(isEdit ? "Produto atualizado" : "Produto criado com sucesso")
-      router.push("/produtos")
+      if (!isEdit && result.data) {
+        router.push(`/produtos/${result.data.id}`)
+      } else {
+        router.push("/produtos")
+      }
       router.refresh()
     } else {
       toast.error(result.error)
@@ -105,12 +112,23 @@ export function ProductForm({ product, categories }: ProductFormProps) {
             <Label>Garantia</Label>
             <Input placeholder="Ex: 12 meses" {...register("warranty")} />
           </div>
+        </CardContent>
+      </Card>
 
-          <div className="space-y-2 sm:col-span-2">
-            <Label>Imagem principal (URL)</Label>
-            <Input type="url" placeholder="https://..." {...register("mainImage")} />
-            {errors.mainImage && <p className="text-xs text-destructive">{errors.mainImage.message}</p>}
-          </div>
+      {/* Foto principal */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Foto Principal</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ImageUpload
+            value={mainImage || null}
+            onChange={(url) => setValue("mainImage", url ?? "")}
+            className="max-w-sm"
+          />
+          <p className="text-xs text-muted-foreground mt-2">
+            Esta foto será exibida nas propostas comerciais e no catálogo.
+          </p>
         </CardContent>
       </Card>
 
@@ -122,18 +140,21 @@ export function ProductForm({ product, categories }: ProductFormProps) {
         <CardContent className="grid gap-4 sm:grid-cols-3">
           <div className="space-y-2">
             <Label>Preço de Tabela (R$) *</Label>
-            <Input type="number" step="0.01" min="0" placeholder="0,00" {...register("listPrice", { valueAsNumber: true })} />
+            <Input type="number" step="0.01" min="0" placeholder="0,00"
+              {...register("listPrice", { valueAsNumber: true })} />
             {errors.listPrice && <p className="text-xs text-destructive">{errors.listPrice.message}</p>}
           </div>
 
           <div className="space-y-2">
             <Label>Custo de Compra (R$) *</Label>
-            <Input type="number" step="0.01" min="0" placeholder="0,00" {...register("costPrice", { valueAsNumber: true })} />
+            <Input type="number" step="0.01" min="0" placeholder="0,00"
+              {...register("costPrice", { valueAsNumber: true })} />
           </div>
 
           <div className="space-y-2">
             <Label>Margem Desejada (%)</Label>
-            <Input type="number" step="0.1" min="0" max="100" placeholder="0" {...register("desiredMargin", { valueAsNumber: true })} />
+            <Input type="number" step="0.1" min="0" max="100" placeholder="0"
+              {...register("desiredMargin", { valueAsNumber: true })} />
           </div>
 
           {(listPrice > 0 || costPrice > 0) && (

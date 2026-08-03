@@ -24,7 +24,8 @@ export default function ForgotPasswordPage() {
     resolver: zodResolver(schema),
   })
 
-  async function onSubmit(data: FormData) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async function onSubmit(_data: FormData) {
     setLoading(true)
     try {
       // Em produção: chamar API route que envia e-mail

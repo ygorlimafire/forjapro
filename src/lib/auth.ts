@@ -65,9 +65,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.roleId = (user as any).roleId
-        token.roleName = (user as any).roleName
-        token.permissions = (user as any).permissions
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const u = user as any
+        token.roleId = u.roleId
+        token.roleName = u.roleName
+        token.permissions = u.permissions
       }
       return token
     },
