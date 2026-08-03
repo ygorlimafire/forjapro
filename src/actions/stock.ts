@@ -324,21 +324,25 @@ export async function fulfillStockDebtInTx(
 ) {
   const order = await tx.salesOrder.findUnique({
     where: { id: orderId },
-    include: {
-      items: true,
-      // BAIXADA = quantities that were actually handed off from stock at delivery time
-      reservations: { where: { status: "BAIXADA" } },
-    },
+    include: { items: true },
   })
   if (!order) return
 
-  const baixadaByProduct = new Map<string, number>()
-  for (const r of order.reservations) {
-    baixadaByProduct.set(r.productId, (baixadaByProduct.get(r.productId) ?? 0) + r.quantity)
+  // Sum all SAIDA movements already linked to this order, regardless of source.
+  // Covers both the formal-reservation path (fulfillOrderReservations) and any
+  // SAIDA created via override/manual entry before this debt-settlement runs.
+  // Using SAIDAs as the single source avoids double-counting with BAIXADA reservations.
+  const priorSaidas = await tx.stockMovement.findMany({
+    where: { referenceType: "SalesOrder", referenceId: orderId, type: "SAIDA" },
+    select: { productId: true, quantity: true },
+  })
+  const alreadySaidaByProduct = new Map<string, number>()
+  for (const s of priorSaidas) {
+    alreadySaidaByProduct.set(s.productId, (alreadySaidaByProduct.get(s.productId) ?? 0) + s.quantity)
   }
 
   for (const item of order.items) {
-    const alreadyFulfilled = baixadaByProduct.get(item.productId) ?? 0
+    const alreadyFulfilled = alreadySaidaByProduct.get(item.productId) ?? 0
     const debt = item.quantity - alreadyFulfilled
     if (debt <= 0) continue
 
