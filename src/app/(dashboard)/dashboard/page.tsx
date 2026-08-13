@@ -2,32 +2,7 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { Metadata } from "next"
 import Link from "next/link"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { formatCurrency, formatDate } from "@/lib/utils"
-import { cn } from "@/lib/utils"
-import {
-  Users,
-  Package,
-  Target,
-  TrendingUp,
-  ShoppingCart,
-  Activity,
-  ArrowUpRight,
-  Clock,
-  Warehouse,
-  AlertTriangle,
-  FileText,
-  Truck,
-  TrendingDown,
-  CreditCard,
-} from "lucide-react"
+import { formatCurrency } from "@/lib/utils"
 import { getStockSummary } from "@/actions/stock"
 import type { OrderStatus } from "@prisma/client"
 
@@ -37,81 +12,113 @@ async function getDashboardData() {
   const now = new Date()
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
 
+  const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1)
+
   const [
     totalCustomers,
-    totalProducts,
-    totalLeads,
+    newCustomersThisMonth,
     totalOpportunities,
-    recentLeads,
-    recentActivities,
     opportunitiesByStage,
+    recentActivities,
     stockSummary,
-    proposalsThisMonth,
+    proposalsTotalThisMonth,
     proposalsApproved,
     ordersAguardando,
-    receivablesPending,
-    payablesOverdue,
+    revenueThisMonth,
+    receivablesTotal,
+    payablesTotal,
+    avgMargin,
+    revenueHistory,
   ] = await Promise.all([
     prisma.customer.count({ where: { deletedAt: null } }),
-    prisma.product.count({ where: { deletedAt: null, isActive: true } }),
-    prisma.lead.count({ where: { deletedAt: null } }),
+    prisma.customer.count({ where: { createdAt: { gte: startOfMonth }, deletedAt: null } }),
     prisma.opportunity.count({ where: { deletedAt: null } }),
-    prisma.lead.findMany({
-      where: { deletedAt: null },
-      orderBy: { createdAt: "desc" },
-      take: 5,
-      include: { assignee: { select: { name: true } } },
+    prisma.pipelineStage.findMany({
+      include: { _count: { select: { opportunities: { where: { deletedAt: null } } } } },
+      orderBy: { order: "asc" },
     }),
     prisma.activity.findMany({
       orderBy: { createdAt: "desc" },
-      take: 5,
+      take: 6,
       include: { user: { select: { name: true } } },
-    }),
-    prisma.pipelineStage.findMany({
-      include: { _count: { select: { opportunities: true } } },
-      orderBy: { order: "asc" },
     }),
     getStockSummary().catch(() => ({ totalValue: 0, lowStock: 0, zeroStock: 0 })),
     prisma.salesProposal.count({
-      where: { createdAt: { gte: startOfMonth }, status: { in: ["ENVIADA", "EM_NEGOCIACAO"] } },
+      where: { createdAt: { gte: startOfMonth }, deletedAt: null },
     }),
     prisma.salesProposal.count({
-      where: { approvedAt: { gte: startOfMonth }, status: "APROVADA" },
+      where: { approvedAt: { gte: startOfMonth }, status: "APROVADA", deletedAt: null },
     }),
     prisma.salesOrder.count({
       where: { status: "AGUARDANDO_EXPEDICAO" as OrderStatus },
     }),
-    prisma.accountReceivable.count({
-      where: { status: "PENDENTE" },
+    prisma.accountReceivable.aggregate({
+      where: { status: "PAGO", paidAt: { gte: startOfMonth }, orderId: { not: null } },
+      _sum: { amount: true },
     }),
-    prisma.accountPayable.count({
-      where: { status: "PENDENTE", dueDate: { lt: now } },
+    prisma.accountReceivable.aggregate({
+      where: { status: { in: ["PENDENTE", "VENCIDO"] } },
+      _sum: { amount: true },
+    }),
+    prisma.accountPayable.aggregate({
+      where: { status: { in: ["PENDENTE", "VENCIDO"] } },
+      _sum: { amount: true },
+    }),
+    prisma.salesProposal.aggregate({
+      where: { status: "APROVADA", approvedAt: { gte: startOfMonth }, deletedAt: null },
+      _avg: { estimatedMarginPct: true },
+    }),
+    prisma.accountReceivable.findMany({
+      where: { status: "PAGO", paidAt: { gte: sixMonthsAgo }, orderId: { not: null } },
+      select: { amount: true, paidAt: true },
     }),
   ])
 
+  const revenue = Number(revenueThisMonth._sum.amount ?? 0)
+  const receivables = Number(receivablesTotal._sum.amount ?? 0)
+  const payables = Number(payablesTotal._sum.amount ?? 0)
+  const margin = Number(avgMargin._avg.estimatedMarginPct ?? 0)
+  const avgTicket = proposalsApproved > 0 ? revenue / proposalsApproved : 0
+  const conversionRate = proposalsTotalThisMonth > 0
+    ? Math.round((proposalsApproved / proposalsTotalThisMonth) * 100)
+    : 0
+
+  // Build last 6 months revenue series
+  const monthNames = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"]
+  const monthlyRevenue: { label: string; value: number }[] = []
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    const month = d.getMonth()
+    const year = d.getFullYear()
+    const total = revenueHistory
+      .filter((r) => {
+        const pd = r.paidAt!
+        return pd.getMonth() === month && pd.getFullYear() === year
+      })
+      .reduce((sum, r) => sum + Number(r.amount), 0)
+    monthlyRevenue.push({ label: monthNames[month], value: total })
+  }
+  const maxMonthlyRevenue = Math.max(...monthlyRevenue.map((m) => m.value), 1)
+
   return {
     totalCustomers,
-    totalProducts,
-    totalLeads,
+    newCustomersThisMonth,
     totalOpportunities,
-    recentLeads,
-    recentActivities,
     opportunitiesByStage,
+    recentActivities,
     stockSummary,
-    proposalsThisMonth,
+    proposalsTotalThisMonth,
     proposalsApproved,
     ordersAguardando,
-    receivablesPending,
-    payablesOverdue,
+    revenue,
+    receivables,
+    payables,
+    margin,
+    avgTicket,
+    conversionRate,
+    monthlyRevenue,
+    maxMonthlyRevenue,
   }
-}
-
-const statusColors: Record<string, string> = {
-  NOVO: "bg-blue-500/10 text-blue-600",
-  CONTATO: "bg-yellow-500/10 text-yellow-600",
-  QUALIFICADO: "bg-green-500/10 text-green-600",
-  CONVERTIDO: "bg-purple-500/10 text-purple-600",
-  DESCARTADO: "bg-red-500/10 text-red-600",
 }
 
 const activityTypeLabel: Record<string, string> = {
@@ -124,286 +131,343 @@ const activityTypeLabel: Record<string, string> = {
   NOTA: "Nota",
 }
 
+function formatRelativeTime(date: Date): string {
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  const diffMin = Math.floor(diffMs / 60000)
+  const diffH = Math.floor(diffMin / 60)
+  const diffD = Math.floor(diffH / 24)
+  if (diffMin < 1) return "agora"
+  if (diffMin < 60) return `${diffMin}min`
+  if (diffH < 24) return `${diffH}h`
+  return `${diffD}d`
+}
+
+/* ── KPI Card ──────────────────────────────────────────────────── */
+function KpiCard({
+  label,
+  value,
+  delta,
+  deltaUp,
+  href,
+}: {
+  label: string
+  value: string
+  delta?: string
+  deltaUp?: boolean
+  href?: string
+}) {
+  const inner = (
+    <div className="bg-white border border-[#dde0e3] p-4 h-full transition-colors hover:border-[#b5652f]/40">
+      <p
+        style={{
+          fontFamily: "'IBM Plex Mono', monospace",
+          fontSize: "10px",
+          color: "#9ba1a8",
+          letterSpacing: "0.04em",
+          textTransform: "uppercase",
+        }}
+      >
+        {label}
+      </p>
+      <p
+        style={{
+          fontFamily: "'IBM Plex Mono', monospace",
+          fontWeight: 600,
+          fontSize: "22px",
+          color: "#16181c",
+          marginTop: "6px",
+          lineHeight: 1.1,
+        }}
+      >
+        {value}
+      </p>
+      {delta && (
+        <p
+          style={{
+            fontSize: "11px",
+            fontWeight: 600,
+            color: deltaUp ? "#3f7d4e" : "#b23b32",
+            marginTop: "5px",
+          }}
+        >
+          {delta}
+        </p>
+      )}
+    </div>
+  )
+
+  if (href) {
+    return <Link href={href} className="block">{inner}</Link>
+  }
+  return inner
+}
+
+/* ── Panel ─────────────────────────────────────────────────────── */
+function Panel({
+  title,
+  href,
+  children,
+}: {
+  title: string
+  href?: string
+  children: React.ReactNode
+}) {
+  return (
+    <div className="bg-white border border-[#dde0e3] p-[22px]">
+      {href ? (
+        <Link href={href}>
+          <h2
+            style={{
+              fontFamily: "'Barlow Condensed', sans-serif",
+              fontWeight: 700,
+              fontSize: "16px",
+              color: "#16181c",
+              textTransform: "uppercase",
+              marginBottom: "16px",
+              letterSpacing: "0.02em",
+            }}
+          >
+            {title}
+          </h2>
+        </Link>
+      ) : (
+        <h2
+          style={{
+            fontFamily: "'Barlow Condensed', sans-serif",
+            fontWeight: 700,
+            fontSize: "16px",
+            color: "#16181c",
+            textTransform: "uppercase",
+            marginBottom: "16px",
+            letterSpacing: "0.02em",
+          }}
+        >
+          {title}
+        </h2>
+      )}
+      {children}
+    </div>
+  )
+}
+
 export default async function DashboardPage() {
   const session = await auth()
   const data = await getDashboardData()
-  const { stockSummary } = data
-  const hasStockAlerts = stockSummary.lowStock + stockSummary.zeroStock > 0
 
-  type StatItem = {
-    title: string
-    value: string | number
-    description: string
-    icon: React.ElementType
-    color: string
-    href?: string
-    alert?: boolean
-  }
-
-  const stats: StatItem[] = [
+  const kpis = [
     {
-      title: "Clientes",
-      value: data.totalCustomers,
-      description: "cadastros ativos",
-      icon: Users,
-      color: "text-blue-500",
-      href: "/clientes",
-    },
-    {
-      title: "Leads",
-      value: data.totalLeads,
-      description: "em acompanhamento",
-      icon: Target,
-      color: "text-orange-500",
-      href: "/crm",
-    },
-    {
-      title: "Oportunidades",
-      value: data.totalOpportunities,
-      description: "no funil de vendas",
-      icon: TrendingUp,
-      color: "text-purple-500",
-      href: "/crm",
-    },
-    {
-      title: "Propostas (mês)",
-      value: data.proposalsThisMonth,
-      description: `${data.proposalsApproved} aprovada${data.proposalsApproved !== 1 ? "s" : ""} este mês`,
-      icon: FileText,
-      color: "text-indigo-500",
-      href: "/propostas",
-    },
-    {
-      title: "Aguardando expedição",
-      value: data.ordersAguardando,
-      description: "pedidos prontos para enviar",
-      icon: Truck,
-      color: data.ordersAguardando > 0 ? "text-yellow-500" : "text-muted-foreground/30",
-      href: data.ordersAguardando > 0 ? "/pedidos?status=AGUARDANDO_EXPEDICAO" : "/pedidos",
-      alert: data.ordersAguardando > 0,
-    },
-    {
-      title: "Produtos",
-      value: data.totalProducts,
-      description: "itens disponíveis",
-      icon: Package,
-      color: "text-green-500",
-      href: "/produtos",
-    },
-    {
-      title: "Valor em Estoque",
-      value: formatCurrency(stockSummary.totalValue),
-      description: "custo médio ponderado",
-      icon: Warehouse,
-      color: "text-cyan-500",
-      href: "/estoque",
-    },
-    {
-      title: "Alertas de Estoque",
-      value: stockSummary.lowStock + stockSummary.zeroStock,
-      description: `${stockSummary.zeroStock} zerado${stockSummary.zeroStock !== 1 ? "s" : ""} · ${stockSummary.lowStock} baixo${stockSummary.lowStock !== 1 ? "s" : ""}`,
-      icon: AlertTriangle,
-      color: hasStockAlerts ? "text-yellow-500" : "text-muted-foreground/30",
-      href: "/estoque",
-      alert: hasStockAlerts,
-    },
-    {
-      title: "A Receber",
-      value: data.receivablesPending,
-      description: "contas a receber pendentes",
-      icon: TrendingUp,
-      color: data.receivablesPending > 0 ? "text-emerald-500" : "text-muted-foreground/30",
+      label: "Faturamento no mês",
+      value: formatCurrency(data.revenue),
       href: "/financeiro?tab=receber",
     },
     {
-      title: "A Pagar (vencidas)",
-      value: data.payablesOverdue,
-      description: "contas vencidas não pagas",
-      icon: data.payablesOverdue > 0 ? TrendingDown : CreditCard,
-      color: data.payablesOverdue > 0 ? "text-red-500" : "text-muted-foreground/30",
+      label: "Propostas enviadas",
+      value: String(data.proposalsTotalThisMonth),
+      href: "/propostas",
+    },
+    {
+      label: "Taxa de conversão",
+      value: `${data.conversionRate}%`,
+    },
+    {
+      label: "Ticket médio",
+      value: formatCurrency(data.avgTicket),
+    },
+    {
+      label: "Pedidos em aberto",
+      value: String(data.ordersAguardando),
+      href: "/pedidos?status=AGUARDANDO_EXPEDICAO",
+    },
+    {
+      label: "Valor em estoque",
+      value: formatCurrency(data.stockSummary.totalValue),
+      href: "/estoque",
+    },
+    {
+      label: "Contas a receber",
+      value: formatCurrency(data.receivables),
+      href: "/financeiro?tab=receber",
+    },
+    {
+      label: "Contas a pagar",
+      value: formatCurrency(data.payables),
       href: "/financeiro?tab=pagar",
-      alert: data.payablesOverdue > 0,
+    },
+    {
+      label: "Margem média",
+      value: data.margin > 0 ? `${data.margin.toFixed(1)}%` : "—",
+    },
+    {
+      label: "Novos clientes",
+      value: String(data.newCustomersThisMonth),
+      href: "/clientes",
     },
   ]
 
+  // Funil: max count for bar widths
+  const maxOpps = Math.max(
+    ...data.opportunitiesByStage.map((s) => s._count.opportunities),
+    1
+  )
+
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">
-          Bom dia, {session?.user?.name?.split(" ")[0]} 👋
-        </h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          Aqui está o resumo comercial de hoje — {formatDate(new Date())}
-        </p>
+    <div className="p-6 bg-background min-h-full">
+      {/* ── Page header ── */}
+      <div className="flex items-end justify-between mb-7 flex-wrap gap-3">
+        <div>
+          <p
+            style={{
+              fontFamily: "'IBM Plex Mono', monospace",
+              fontSize: "11px",
+              color: "#9ba1a8",
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+            }}
+          >
+            PAINEL GERAL
+          </p>
+          <h1
+            style={{
+              fontFamily: "'Barlow Condensed', sans-serif",
+              fontWeight: 800,
+              fontSize: "34px",
+              color: "#16181c",
+              lineHeight: 1,
+              marginTop: "2px",
+            }}
+          >
+            Dashboard
+          </h1>
+        </div>
+        <Link
+          href="/propostas/nova"
+          className="btn-clip text-white inline-flex items-center px-5 py-2.5 font-display font-bold text-[14px] uppercase tracking-[0.02em]"
+        >
+          Nova Proposta
+        </Link>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-        {stats.map((stat) => {
-          const Icon = stat.icon
-          const inner = (
-            <CardContent className="pt-6">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">{stat.title}</p>
-                  <p className={cn("text-3xl font-bold mt-1", stat.alert && "text-yellow-600 dark:text-yellow-400")}>
-                    {stat.value}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">{stat.description}</p>
-                </div>
-                <div className={`p-2 rounded-lg bg-muted ${stat.color}`}>
-                  <Icon size={20} />
-                </div>
-              </div>
-            </CardContent>
-          )
-
-          if (stat.href) {
-            return (
-              <Link key={stat.title} href={stat.href} className="block group">
-                <Card className={cn(
-                  "transition-all duration-150 group-hover:shadow-md group-hover:border-foreground/20",
-                  stat.alert && "border-yellow-300/60 dark:border-yellow-800/60"
-                )}>
-                  {inner}
-                </Card>
-              </Link>
-            )
-          }
-
-          return <Card key={stat.title}>{inner}</Card>
-        })}
+      {/* ── KPI grid ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 mb-7" style={{ gap: "2px" }}>
+        {kpis.map((kpi) => (
+          <KpiCard key={kpi.label} {...kpi} />
+        ))}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Funil por etapa */}
-        <Card className="lg:col-span-1">
-          <CardHeader>
-            <Link href="/crm" className="flex items-center justify-between group">
-              <div>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <ShoppingCart size={16} />
-                  Funil de Vendas
-                </CardTitle>
-                <CardDescription>Oportunidades por etapa</CardDescription>
-              </div>
-              <ArrowUpRight size={16} className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-            </Link>
-          </CardHeader>
-          <CardContent className="space-y-2">
+      {/* ── Lower panels ── */}
+      <div className="grid gap-5 lg:grid-cols-2">
+        {/* Left: Funil + Chart */}
+        <div className="flex flex-col gap-5">
+          <Panel title="Funil de oportunidades" href="/crm">
             {data.opportunitiesByStage.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">
+              <p className="text-sm text-[#9ba1a8] py-4 text-center">
                 Nenhuma etapa cadastrada
               </p>
             ) : (
-              data.opportunitiesByStage.map((stage) => (
-                <Link
-                  key={stage.id}
-                  href="/crm"
-                  className="flex items-center gap-3 rounded-md px-2 py-1.5 hover:bg-muted/50 transition-colors"
-                >
-                  <div
-                    className="w-2 h-2 rounded-full shrink-0"
-                    style={{ backgroundColor: stage.color }}
-                  />
-                  <span className="text-sm flex-1 truncate">{stage.name}</span>
-                  <Badge variant="secondary" className="text-xs">
-                    {stage._count.opportunities}
-                  </Badge>
-                </Link>
-              ))
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Leads recentes */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <Link href="/crm" className="flex items-center justify-between group">
-              <div>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Target size={16} />
-                  Leads Recentes
-                </CardTitle>
-                <CardDescription>Últimas entradas no CRM</CardDescription>
-              </div>
-              <ArrowUpRight size={16} className="text-muted-foreground group-hover:text-foreground transition-colors" />
-            </Link>
-          </CardHeader>
-          <CardContent>
-            {data.recentLeads.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-6">
-                Nenhum lead registrado ainda
-              </p>
-            ) : (
-              <div className="space-y-1">
-                {data.recentLeads.map((lead) => (
-                  <Link
-                    key={lead.id}
-                    href="/crm"
-                    className="flex items-center justify-between py-2 px-2 rounded-md hover:bg-muted/50 transition-colors border-b last:border-0"
-                  >
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">{lead.name}</p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {lead.company || "Sem empresa"} · {lead.assignee?.name || "Sem responsável"}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0 ml-4">
-                      <span
-                        className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusColors[lead.status] || ""}`}
+              <div className="flex flex-col gap-2.5">
+                {data.opportunitiesByStage.map((stage) => {
+                  const pct = Math.round(
+                    (stage._count.opportunities / maxOpps) * 100
+                  )
+                  return (
+                    <div key={stage.id} className="flex items-center gap-3">
+                      <div className="w-[120px] text-[12px] font-semibold text-[#6b7178] truncate shrink-0">
+                        {stage.name}
+                      </div>
+                      <div className="flex-1 h-[22px] bg-[#eceef0] relative overflow-hidden">
+                        <div
+                          className="h-full bg-[#b5652f] transition-all"
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                      <div
+                        className="w-9 text-right shrink-0"
+                        style={{
+                          fontFamily: "'IBM Plex Mono', monospace",
+                          fontSize: "12px",
+                          color: "#16181c",
+                        }}
                       >
-                        {lead.status}
-                      </span>
-                      <span className="text-xs text-muted-foreground whitespace-nowrap">
-                        {formatDate(lead.createdAt)}
-                      </span>
+                        {stage._count.opportunities}
+                      </div>
                     </div>
-                  </Link>
-                ))}
+                  )
+                })}
               </div>
             )}
-          </CardContent>
-        </Card>
-      </div>
+          </Panel>
 
-      {/* Atividades recentes */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <Activity size={16} />
-            Atividades Recentes
-          </CardTitle>
-          <CardDescription>Últimas interações registradas</CardDescription>
-        </CardHeader>
-        <CardContent>
+          <Panel title="Faturamento — últimos 6 meses">
+            <div className="flex items-end gap-2.5 h-[110px]">
+              {data.monthlyRevenue.map((m) => {
+                const heightPct = Math.round((m.value / data.maxMonthlyRevenue) * 100)
+                return (
+                  <div
+                    key={m.label}
+                    className="flex-1 flex flex-col items-center gap-1.5"
+                  >
+                    <div
+                      className="w-full bg-[#9ba1a8]"
+                      style={{ height: `${Math.max(heightPct, 4)}%` }}
+                    />
+                    <div
+                      style={{
+                        fontSize: "10px",
+                        color: "#9ba1a8",
+                        fontFamily: "'IBM Plex Mono', monospace",
+                      }}
+                    >
+                      {m.label}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </Panel>
+        </div>
+
+        {/* Right: Atividades recentes */}
+        <Panel title="Atividades recentes">
           {data.recentActivities.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-6">
+            <p className="text-sm text-[#9ba1a8] py-6 text-center">
               Nenhuma atividade registrada ainda
             </p>
           ) : (
-            <div className="space-y-3">
+            <div className="flex flex-col">
               {data.recentActivities.map((activity) => (
                 <div
                   key={activity.id}
-                  className="flex items-start gap-3 py-2 border-b last:border-0"
+                  className="flex gap-2.5 py-2.5 border-b border-[#eceef0] last:border-0"
                 >
-                  <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center shrink-0 mt-0.5">
-                    <Clock size={12} className="text-muted-foreground" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium truncate">{activity.title}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {activityTypeLabel[activity.type]} · {activity.user.name} · {formatDate(activity.createdAt)}
+                  <div
+                    className="w-1.5 h-1.5 bg-[#b5652f] shrink-0 mt-[5px]"
+                  />
+                  <div className="min-w-0">
+                    <p className="text-[13px] text-[#21242a] leading-snug">
+                      {activity.title}
+                    </p>
+                    <p
+                      style={{
+                        fontFamily: "'IBM Plex Mono', monospace",
+                        fontSize: "11px",
+                        color: "#9ba1a8",
+                        marginTop: "2px",
+                      }}
+                    >
+                      {activityTypeLabel[activity.type] ?? activity.type}
+                      {" · "}
+                      {activity.user.name}
+                      {" · "}
+                      {formatRelativeTime(activity.createdAt)}
                     </p>
                   </div>
                 </div>
               ))}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </Panel>
+      </div>
     </div>
   )
 }

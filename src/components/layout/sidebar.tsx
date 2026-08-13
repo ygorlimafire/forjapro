@@ -19,132 +19,288 @@ import {
   ChevronLeft,
   ChevronRight,
   Truck,
+  LogOut,
 } from "lucide-react"
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
 import { getInitials } from "@/lib/utils"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { handleSignOut } from "@/actions/auth"
 
 interface SidebarProps {
   userPermissions: string[]
   userName: string
   userRole: string
+  collapsed: boolean
+  mobileOpen: boolean
+  onCollapse: () => void
+  onMobileClose: () => void
 }
 
 const navItems = [
-  { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard, module: "dashboard" },
-  { title: "CRM", href: "/crm", icon: Target, module: "crm" },
-  { title: "Clientes", href: "/clientes", icon: Users, module: "clientes" },
-  { title: "Propostas", href: "/propostas", icon: FileText, module: "propostas" },
-  { title: "Pedidos", href: "/pedidos", icon: ShoppingCart, module: "pedidos" },
-  { title: "Produtos", href: "/produtos", icon: Package, module: "produtos" },
-  { title: "Estoque", href: "/estoque", icon: Warehouse, module: "estoque" },
-  { title: "Compras", href: "/compras", icon: TrendingUp, module: "compras" },
-  { title: "Fornecedores", href: "/fornecedores", icon: Truck, module: "compras" },
-  { title: "Financeiro", href: "/financeiro", icon: DollarSign, module: "financeiro" },
-  { title: "Relatórios", href: "/relatorios", icon: BarChart3, module: "relatorios" },
-  { title: "Configurações", href: "/configuracoes", icon: Settings, module: "configuracoes" },
+  { title: "Dashboard",     href: "/dashboard",    module: "dashboard" },
+  { title: "CRM",           href: "/crm",           module: "crm" },
+  { title: "Clientes",      href: "/clientes",      module: "clientes" },
+  { title: "Propostas",     href: "/propostas",     module: "propostas" },
+  { title: "Pedidos",       href: "/pedidos",       module: "pedidos" },
+  { title: "Produtos",      href: "/produtos",      module: "produtos" },
+  { title: "Estoque",       href: "/estoque",       module: "estoque" },
+  { title: "Compras",       href: "/compras",       module: "compras" },
+  { title: "Fornecedores",  href: "/fornecedores",  module: "compras" },
+  { title: "Financeiro",    href: "/financeiro",    module: "financeiro" },
+  { title: "Relatórios",    href: "/relatorios",    module: "relatorios" },
+  { title: "Configurações", href: "/configuracoes", module: "configuracoes" },
 ]
 
-export function Sidebar({ userPermissions, userName, userRole }: SidebarProps) {
+/* Right-leaning parallelogram — industrial motif */
+function NavShape({ active }: { active: boolean }) {
+  return (
+    <span
+      aria-hidden
+      style={{
+        display: "block",
+        flexShrink: 0,
+        width: "7px",
+        height: "14px",
+        clipPath: "polygon(0 15%, 100% 0, 100% 100%, 0 85%)",
+        backgroundColor: active ? "var(--copper-600)" : "rgba(255,255,255,0.18)",
+        transition: "background-color 0.2s",
+      }}
+    />
+  )
+}
+
+function NavItem({
+  href,
+  title,
+  active,
+  collapsed,
+  onClick,
+}: {
+  href: string
+  title: string
+  active: boolean
+  collapsed: boolean
+  onClick?: () => void
+}) {
+  const linkClass = cn(
+    "flex items-center border-l-[3px] w-full transition-colors",
+    collapsed ? "justify-center px-2 py-3" : "gap-3 pl-[13px] pr-4 py-2.5",
+    active
+      ? "border-[var(--copper-600)] bg-white/[0.05] text-white"
+      : "border-transparent text-[var(--steel-600)] hover:bg-white/[0.04] hover:text-white"
+  )
+
+  if (collapsed) {
+    return (
+      <Tooltip>
+        <TooltipTrigger
+          render={<Link href={href} className={linkClass} onClick={onClick} />}
+        >
+          <NavShape active={active} />
+        </TooltipTrigger>
+        <TooltipContent side="right">{title}</TooltipContent>
+      </Tooltip>
+    )
+  }
+
+  return (
+    <Link href={href} className={linkClass} onClick={onClick}>
+      <NavShape active={active} />
+      <span className="font-display font-semibold text-[13px] tracking-[0.01em] whitespace-nowrap uppercase">
+        {title}
+      </span>
+    </Link>
+  )
+}
+
+function Logo({ collapsed }: { collapsed: boolean }) {
+  return (
+    <div
+      className={cn(
+        "flex items-center h-[60px] shrink-0 border-b border-white/[0.07]",
+        collapsed ? "justify-center px-2" : "px-4 gap-3"
+      )}
+    >
+      <div className="w-8 h-8 shrink-0 flex items-center justify-center border border-[var(--copper-600)]/40 bg-[var(--copper-600)]/10">
+        <span className="font-display font-bold text-[var(--copper-600)] text-sm leading-none">F</span>
+      </div>
+      {!collapsed && (
+        <div className="min-w-0">
+          <p className="font-display font-bold text-white text-[15px] leading-none tracking-[0.05em] uppercase">
+            FORJA PRO
+          </p>
+          <p className="font-mono text-[9px] text-[var(--steel-600)] tracking-[0.08em] uppercase mt-0.5">
+            Gestão Comercial
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function UserSection({
+  userName,
+  userRole,
+  collapsed,
+  onCollapse,
+}: {
+  userName: string
+  userRole: string
+  collapsed: boolean
+  onCollapse: () => void
+}) {
+  return (
+    <div className="shrink-0 border-t border-white/[0.07]">
+      {!collapsed ? (
+        <div className="flex items-center gap-2.5 px-4 py-3 border-b border-white/[0.07]">
+          <div className="w-7 h-7 shrink-0 flex items-center justify-center bg-[var(--copper-600)]/15">
+            <span className="font-display font-bold text-[11px] text-[var(--copper-600)] leading-none">
+              {getInitials(userName)}
+            </span>
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[12px] font-semibold text-white leading-none truncate">{userName}</p>
+            <p className="text-[10px] text-[var(--steel-600)] mt-0.5 truncate">{userRole}</p>
+          </div>
+          <button
+            onClick={() => handleSignOut()}
+            title="Sair"
+            className="p-1 text-[var(--steel-600)] hover:text-white transition-colors"
+          >
+            <LogOut size={13} />
+          </button>
+        </div>
+      ) : (
+        <div className="flex justify-center py-2.5 border-b border-white/[0.07]">
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <button
+                  onClick={() => handleSignOut()}
+                  className="w-7 h-7 flex items-center justify-center bg-[var(--copper-600)]/15 text-[var(--copper-600)] hover:bg-[var(--copper-600)]/25 transition-colors"
+                />
+              }
+            >
+              <span className="font-display font-bold text-[11px] leading-none">
+                {getInitials(userName)}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="right">{userName} — Sair</TooltipContent>
+          </Tooltip>
+        </div>
+      )}
+
+      <button
+        onClick={onCollapse}
+        title={collapsed ? "Expandir menu" : "Recolher menu"}
+        className={cn(
+          "w-full flex items-center py-2.5 px-3 text-[var(--steel-600)] hover:text-white transition-colors",
+          collapsed ? "justify-center" : "justify-between"
+        )}
+      >
+        {!collapsed && (
+          <span className="font-mono text-[10px] tracking-[0.08em] uppercase">Recolher</span>
+        )}
+        {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+      </button>
+    </div>
+  )
+}
+
+/* Content shared by desktop and mobile renders */
+function SidebarContent({
+  collapsed,
+  onCollapse,
+  userName,
+  userRole,
+  visibleItems,
+  pathname,
+  onItemClick,
+}: {
+  collapsed: boolean
+  onCollapse: () => void
+  userName: string
+  userRole: string
+  visibleItems: typeof navItems
+  pathname: string
+  onItemClick?: () => void
+}) {
+  return (
+    <>
+      <Logo collapsed={collapsed} />
+      <nav className="flex-1 py-2 overflow-y-auto overflow-x-hidden">
+        {visibleItems.map((item) => {
+          const active =
+            pathname === item.href || pathname.startsWith(item.href + "/")
+          return (
+            <NavItem
+              key={item.href}
+              href={item.href}
+              title={item.title}
+              active={active}
+              collapsed={collapsed}
+              onClick={onItemClick}
+            />
+          )
+        })}
+      </nav>
+      <UserSection
+        userName={userName}
+        userRole={userRole}
+        collapsed={collapsed}
+        onCollapse={onCollapse}
+      />
+    </>
+  )
+}
+
+export function Sidebar({
+  userPermissions,
+  userName,
+  userRole,
+  collapsed,
+  mobileOpen,
+  onCollapse,
+  onMobileClose,
+}: SidebarProps) {
   const pathname = usePathname()
-  const [collapsed, setCollapsed] = useState(false)
 
   const visibleItems = navItems.filter((item) =>
     can(userPermissions, item.module, "view")
   )
 
+  const sharedProps = {
+    onCollapse,
+    userName,
+    userRole,
+    visibleItems,
+    pathname,
+  }
+
   return (
-    <aside
-      className={cn(
-        "flex flex-col h-screen bg-sidebar text-sidebar-foreground border-r border-sidebar-border transition-all duration-300 shrink-0",
-        collapsed ? "w-16" : "w-60"
-      )}
-    >
-      {/* Logo */}
-      <div className="flex items-center gap-3 px-4 h-16 border-b border-sidebar-border shrink-0">
-        <div className="w-8 h-8 rounded bg-sidebar-primary flex items-center justify-center shrink-0">
-          <span className="text-sidebar-primary-foreground font-bold text-sm">F</span>
-        </div>
-        {!collapsed && (
-          <div className="overflow-hidden">
-            <p className="font-bold text-sm tracking-wider leading-none">FORJA PRO</p>
-            <p className="text-[10px] text-sidebar-foreground/40 tracking-widest uppercase">Gestão Comercial</p>
-          </div>
+    <>
+      {/* ── Desktop sidebar: static in flow, never fixed ── */}
+      <aside
+        className={cn(
+          "hidden lg:flex flex-col bg-[#16181c] h-screen shrink-0 overflow-hidden transition-all duration-300",
+          collapsed ? "w-16" : "w-[232px]"
         )}
-      </div>
+      >
+        <SidebarContent {...sharedProps} collapsed={collapsed} />
+      </aside>
 
-      {/* Nav */}
-      <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-0.5">
-        {visibleItems.map((item) => {
-          const Icon = item.icon
-          const active = pathname === item.href || pathname.startsWith(item.href + "/")
-
-          const linkEl = (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors",
-                active
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                  : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground",
-                collapsed && "justify-center px-2"
-              )}
-            >
-              <Icon
-                size={18}
-                className={cn("shrink-0", active && "text-sidebar-primary")}
-              />
-              {!collapsed && <span>{item.title}</span>}
-            </Link>
-          )
-
-          if (collapsed) {
-            return (
-              <Tooltip key={item.href}>
-                <TooltipTrigger render={<span />}>{linkEl}</TooltipTrigger>
-                <TooltipContent side="right">{item.title}</TooltipContent>
-              </Tooltip>
-            )
-          }
-
-          return linkEl
-        })}
-      </nav>
-
-      {/* User + collapse */}
-      <div className="border-t border-sidebar-border p-3 space-y-2 shrink-0">
-        {!collapsed && (
-          <div className="flex items-center gap-3 px-2 py-1">
-            <div className="w-7 h-7 rounded-full bg-sidebar-primary/20 flex items-center justify-center shrink-0">
-              <span className="text-[11px] font-semibold text-sidebar-primary">
-                {getInitials(userName)}
-              </span>
-            </div>
-            <div className="overflow-hidden min-w-0">
-              <p className="text-xs font-medium leading-none truncate">{userName}</p>
-              <p className="text-[11px] text-sidebar-foreground/40 mt-0.5">{userRole}</p>
-            </div>
-          </div>
+      {/* ── Mobile sidebar: fixed overlay, off-canvas when closed ── */}
+      <aside
+        className={cn(
+          "lg:hidden fixed inset-y-0 left-0 z-50 w-[232px] flex flex-col bg-[#16181c] shadow-2xl transition-transform duration-300",
+          mobileOpen ? "translate-x-0" : "-translate-x-full"
         )}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setCollapsed(!collapsed)}
-          className={cn(
-            "w-full text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent/50",
-            collapsed ? "justify-center px-2" : "justify-start"
-          )}
-        >
-          {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-          {!collapsed && <span className="text-xs">Recolher</span>}
-        </Button>
-      </div>
-    </aside>
+      >
+        <SidebarContent
+          {...sharedProps}
+          collapsed={false}
+          onItemClick={onMobileClose}
+        />
+      </aside>
+    </>
   )
 }
