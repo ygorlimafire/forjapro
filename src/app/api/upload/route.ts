@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { createSupabaseAdmin } from "@/lib/supabase"
 
+export const dynamic = "force-dynamic"
+
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif", "application/pdf"]
 const MAX_SIZE = 10 * 1024 * 1024 // 10MB
 
