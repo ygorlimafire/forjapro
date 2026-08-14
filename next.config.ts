@@ -8,7 +8,7 @@ const nextConfig: NextConfig = {
   },
   experimental: {
     serverActions: {
-      allowedOrigins: ["localhost:3000", "forjapro-erp.vercel.app"],
+      allowedOrigins: ["localhost:3000", "forjapro-erp-ygorlimafire-8859s-projects.vercel.app"],
     },
   },
 }
