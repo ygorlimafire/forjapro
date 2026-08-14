@@ -4,6 +4,7 @@ import { PrismaAdapter } from "@auth/prisma-adapter"
 import { prisma } from "@/lib/prisma"
 import bcrypt from "bcryptjs"
 import { z } from "zod"
+import { authConfig } from "./auth.config"
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -11,12 +12,8 @@ const loginSchema = z.object({
 })
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  ...authConfig,
   adapter: PrismaAdapter(prisma),
-  session: { strategy: "jwt" },
-  pages: {
-    signIn: "/login",
-    error: "/login",
-  },
   providers: [
     Credentials({
       async authorize(credentials) {
@@ -57,30 +54,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           image: user.image,
           roleId: user.roleId,
           roleName: user.role.name,
-          permissions: user.role.permissions.map((rp) => `${rp.permission.module}:${rp.permission.action}`),
+          permissions: user.role.permissions.map(
+            (rp) => `${rp.permission.module}:${rp.permission.action}`
+          ),
         }
       },
     }),
   ],
-  callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const u = user as any
-        token.roleId = u.roleId
-        token.roleName = u.roleName
-        token.permissions = u.permissions
-      }
-      return token
-    },
-    async session({ session, token }) {
-      if (token) {
-        session.user.id = token.sub as string
-        session.user.roleId = token.roleId as string
-        session.user.roleName = token.roleName as string
-        session.user.permissions = token.permissions as string[]
-      }
-      return session
-    },
-  },
 })
