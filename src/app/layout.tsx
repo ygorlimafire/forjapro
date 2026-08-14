@@ -1,26 +1,37 @@
 import type { Metadata } from "next"
-import { Barlow_Condensed, IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google"
+import localFont from "next/font/local"
 import { Toaster } from "@/components/ui/sonner"
 import "./globals.css"
 
-const barlowCondensed = Barlow_Condensed({
+const barlowCondensed = localFont({
+  src: [
+    { path: "../../public/fonts/barlow-condensed-latin-500-normal.woff2", weight: "500" },
+    { path: "../../public/fonts/barlow-condensed-latin-600-normal.woff2", weight: "600" },
+    { path: "../../public/fonts/barlow-condensed-latin-700-normal.woff2", weight: "700" },
+    { path: "../../public/fonts/barlow-condensed-latin-800-normal.woff2", weight: "800" },
+  ],
   variable: "--font-barlow-condensed",
-  subsets: ["latin"],
-  weight: ["500", "600", "700", "800"],
   display: "swap",
 })
 
-const ibmPlexSans = IBM_Plex_Sans({
+const ibmPlexSans = localFont({
+  src: [
+    { path: "../../public/fonts/ibm-plex-sans-latin-400-normal.woff2", weight: "400" },
+    { path: "../../public/fonts/ibm-plex-sans-latin-500-normal.woff2", weight: "500" },
+    { path: "../../public/fonts/ibm-plex-sans-latin-600-normal.woff2", weight: "600" },
+    { path: "../../public/fonts/ibm-plex-sans-latin-700-normal.woff2", weight: "700" },
+  ],
   variable: "--font-ibm-plex-sans",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
   display: "swap",
 })
 
-const ibmPlexMono = IBM_Plex_Mono({
+const ibmPlexMono = localFont({
+  src: [
+    { path: "../../public/fonts/ibm-plex-mono-latin-500-normal.woff2", weight: "500" },
+    { path: "../../public/fonts/ibm-plex-mono-latin-600-normal.woff2", weight: "600" },
+    { path: "../../public/fonts/ibm-plex-mono-latin-700-normal.woff2", weight: "700" },
+  ],
   variable: "--font-ibm-plex-mono",
-  subsets: ["latin"],
-  weight: ["500", "600", "700"],
   display: "swap",
 })
 
