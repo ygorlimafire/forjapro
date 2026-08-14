@@ -2,11 +2,9 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { ProposalStatusBadge } from "./proposal-status-badge"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { StatusBadge } from "@/components/ui/status-badge"
 import { formatCurrency, formatDate } from "@/lib/utils"
-import { Search, Plus, Eye, Edit } from "lucide-react"
+import { Eye, Edit, FileText } from "lucide-react"
 import type { ProposalStatus } from "@prisma/client"
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -14,8 +12,8 @@ interface ProposalRow {
   id: string
   number: string
   status: ProposalStatus
-  totalAmount: any        // Prisma Decimal
-  estimatedMarginPct: any // Prisma Decimal
+  totalAmount: any
+  estimatedMarginPct: any
   validityDate: Date | null
   createdAt: Date
   customer: { companyName: string | null; tradeName: string | null; document: string }
@@ -25,7 +23,7 @@ interface ProposalRow {
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
 const STATUS_OPTIONS: { value: string; label: string }[] = [
-  { value: "", label: "Todos os status" },
+  { value: "", label: "Todos" },
   { value: "RASCUNHO", label: "Rascunho" },
   { value: "ENVIADA", label: "Enviada" },
   { value: "EM_NEGOCIACAO", label: "Em Negociação" },
@@ -33,6 +31,8 @@ const STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: "RECUSADA", label: "Recusada" },
   { value: "VENCIDA", label: "Vencida" },
 ]
+
+const mono: React.CSSProperties = { fontFamily: "'IBM Plex Mono', monospace" }
 
 export function ProposalList({ proposals }: { proposals: ProposalRow[] }) {
   const router = useRouter()
@@ -51,138 +51,121 @@ export function ProposalList({ proposals }: { proposals: ProposalRow[] }) {
   })
 
   return (
-    <div className="space-y-4">
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por nº, cliente ou vendedor..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-        <select
-          className="px-3 py-2 text-sm border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring w-full sm:w-48"
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-        >
+    <div className="bg-white border border-[#dde0e3]">
+      {/* ── Search + status chips ── */}
+      <div className="flex flex-wrap gap-2.5 items-center px-4 py-3.5 border-b border-[#eceef0]">
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Buscar por nº, cliente ou vendedor..."
+          className="flex-1 min-w-[200px] max-w-[280px] px-3 py-2 bg-[#f5f6f7] border border-[#dde0e3] text-[13px] text-[#21242a] placeholder:text-[#9ba1a8] outline-none focus:border-[#b5652f] transition-colors"
+        />
+        <div className="flex flex-wrap gap-1.5">
           {STATUS_OPTIONS.map((s) => (
-            <option key={s.value} value={s.value}>{s.label}</option>
+            <button
+              key={s.value}
+              onClick={() => setStatusFilter(s.value)}
+              className={
+                statusFilter === s.value
+                  ? "px-3 py-1.5 text-[12px] font-semibold bg-[#16181c] text-white transition-colors"
+                  : "px-3 py-1.5 text-[12px] font-semibold border border-[#dde0e3] text-[#6b7178] hover:border-[#b5652f] hover:text-[#16181c] transition-colors"
+              }
+            >
+              {s.label}
+            </button>
           ))}
-        </select>
-        <Button onClick={() => router.push("/propostas/nova")}>
-          <Plus size={14} />
-          Nova proposta
-        </Button>
-      </div>
-
-      {/* Table */}
-      <div className="border rounded-lg overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b bg-muted/50">
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Nº</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Cliente</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden md:table-cell">Vendedor</th>
-                <th className="px-4 py-3 text-right font-medium text-muted-foreground">Valor</th>
-                <th className="px-4 py-3 text-right font-medium text-muted-foreground hidden sm:table-cell">Margem</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden lg:table-cell">Data</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden lg:table-cell">Validade</th>
-                <th className="px-4 py-3 text-right font-medium text-muted-foreground">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.length === 0 && (
-                <tr>
-                  <td colSpan={9} className="px-4 py-12 text-center text-muted-foreground">
-                    {proposals.length === 0
-                      ? "Nenhuma proposta criada ainda"
-                      : "Nenhuma proposta encontrada com os filtros aplicados"}
-                  </td>
-                </tr>
-              )}
-              {filtered.map((proposal) => {
-                const customerName = proposal.customer.companyName || proposal.customer.tradeName || proposal.customer.document
-                const marginPct = Number(proposal.estimatedMarginPct ?? 0)
-                const isExpired =
-                  proposal.validityDate &&
-                  new Date(proposal.validityDate) < new Date() &&
-                  proposal.status !== "APROVADA"
-
-                return (
-                  <tr
-                    key={proposal.id}
-                    className="border-b last:border-0 hover:bg-muted/30 transition-colors"
-                  >
-                    <td className="px-4 py-3">
-                      <span className="font-mono font-medium">{proposal.number}</span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <p className="font-medium truncate max-w-[160px]">{customerName}</p>
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">
-                      {proposal.seller.name}
-                    </td>
-                    <td className="px-4 py-3 text-right font-medium">
-                      {formatCurrency(Number(proposal.totalAmount))}
-                    </td>
-                    <td className="px-4 py-3 text-right hidden sm:table-cell">
-                      <span className={
-                        marginPct < 15 ? "text-red-600 font-medium" :
-                        marginPct < 30 ? "text-yellow-600" : "text-green-600"
-                      }>
-                        {marginPct.toFixed(1)}%
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <ProposalStatusBadge status={proposal.status} />
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell text-xs">
-                      {formatDate(proposal.createdAt)}
-                    </td>
-                    <td className="px-4 py-3 hidden lg:table-cell text-xs">
-                      <span className={isExpired ? "text-orange-600 font-medium" : "text-muted-foreground"}>
-                        {proposal.validityDate ? formatDate(proposal.validityDate) : "—"}
-                        {isExpired && " ⚠"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7"
-                          onClick={() => router.push(`/propostas/${proposal.id}`)}
-                        >
-                          <Eye size={13} />
-                        </Button>
-                        {!proposal.status.match(/APROVADA|RECUSADA/) && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7"
-                            onClick={() => router.push(`/propostas/${proposal.id}/editar`)}
-                          >
-                            <Edit size={13} />
-                          </Button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
         </div>
       </div>
 
-      <p className="text-xs text-muted-foreground">
-        {filtered.length} {filtered.length === 1 ? "proposta" : "propostas"} encontradas
-      </p>
+      {/* ── Desktop header ── */}
+      <div
+        className="hidden md:grid px-4 py-2.5 bg-[#f5f6f7]"
+        style={{ ...mono, fontSize: "11px", color: "#9ba1a8", gridTemplateColumns: "0.7fr 1.4fr 1fr 0.7fr 0.9fr 0.9fr auto" }}
+      >
+        <div>Nº</div>
+        <div>CLIENTE</div>
+        <div>VALOR</div>
+        <div>MARGEM</div>
+        <div>DATA</div>
+        <div>STATUS</div>
+        <div />
+      </div>
+
+      {/* ── Rows ── */}
+      {filtered.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-14 gap-2">
+          <FileText size={32} className="text-[#dde0e3]" />
+          <p className="text-[13px] text-[#9ba1a8]">
+            {proposals.length === 0
+              ? "Nenhuma proposta criada ainda"
+              : "Nenhuma proposta encontrada"}
+          </p>
+        </div>
+      ) : (
+        filtered.map((p) => {
+          const customerName = p.customer.companyName || p.customer.tradeName || p.customer.document
+          const marginPct = Number(p.estimatedMarginPct ?? 0)
+          const marginColor = marginPct < 15 ? "#b23b32" : marginPct < 30 ? "#8a6d00" : "#3f7d4e"
+
+          return (
+            <div key={p.id} className="border-t border-[#eceef0] group">
+              {/* Desktop */}
+              <div
+                className="hidden md:grid items-center px-4 py-3.5 text-[14px] hover:bg-[#f5f6f7] transition-colors cursor-pointer"
+                style={{ gridTemplateColumns: "0.7fr 1.4fr 1fr 0.7fr 0.9fr 0.9fr auto" }}
+                onClick={() => router.push(`/propostas/${p.id}`)}
+              >
+                <div style={{ ...mono, fontSize: "12px", color: "#9ba1a8" }}>{p.number}</div>
+                <div className="font-semibold text-[#16181c] truncate pr-3">{customerName}</div>
+                <div style={{ ...mono, fontSize: "13px" }}>{formatCurrency(Number(p.totalAmount))}</div>
+                <div style={{ ...mono, fontSize: "13px", fontWeight: 600, color: marginColor }}>
+                  {marginPct > 0 ? `${marginPct.toFixed(1)}%` : "—"}
+                </div>
+                <div className="text-[#6b7178] text-[13px]">{formatDate(p.createdAt)}</div>
+                <div><StatusBadge status={p.status} /></div>
+                <div className="flex items-center gap-1 ml-2" onClick={(e) => e.stopPropagation()}>
+                  <button
+                    onClick={() => router.push(`/propostas/${p.id}`)}
+                    className="p-1.5 text-[#9ba1a8] hover:text-[#16181c] transition-colors"
+                    title="Ver"
+                  >
+                    <Eye size={13} />
+                  </button>
+                  <button
+                    onClick={() => router.push(`/propostas/${p.id}/editar`)}
+                    className="p-1.5 text-[#9ba1a8] hover:text-[#16181c] transition-colors"
+                    title="Editar"
+                  >
+                    <Edit size={13} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Mobile */}
+              <div
+                className="md:hidden px-4 py-3.5 cursor-pointer hover:bg-[#f5f6f7] transition-colors"
+                onClick={() => router.push(`/propostas/${p.id}`)}
+              >
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <span className="font-semibold text-[14px] text-[#16181c] truncate">{customerName}</span>
+                  <StatusBadge status={p.status} />
+                </div>
+                <p style={mono} className="text-[11px] text-[#9ba1a8]">
+                  {p.number} · {formatCurrency(Number(p.totalAmount))} · {formatDate(p.createdAt)}
+                </p>
+              </div>
+            </div>
+          )
+        })
+      )}
+
+      {filtered.length > 0 && (
+        <div className="px-4 py-2.5 border-t border-[#eceef0]">
+          <p style={{ ...mono, fontSize: "11px", color: "#9ba1a8" }}>
+            {filtered.length} proposta{filtered.length !== 1 ? "s" : ""}
+          </p>
+        </div>
+      )}
     </div>
   )
 }

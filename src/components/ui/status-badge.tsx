@@ -25,8 +25,9 @@ const STATUS_MAP: Record<string, StatusConfig> = {
   VENCIDO: { variant: "danger",  label: "VENCIDO" },
 
   // ── Estoque ──
-  NORMAL: { variant: "success", label: "NORMAL" },
-  BAIXO:  { variant: "danger",  label: "BAIXO" },
+  NORMAL:  { variant: "success", label: "NORMAL" },
+  BAIXO:   { variant: "warning", label: "BAIXO" },
+  ZERADO:  { variant: "danger",  label: "ZERADO" },
 
   // ── Compras ──
   RECEBIDA:  { variant: "success", label: "RECEBIDA" },

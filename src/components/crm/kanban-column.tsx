@@ -4,7 +4,8 @@ import { useDroppable } from "@dnd-kit/core"
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import { cn, formatCurrency } from "@/lib/utils"
 import { KanbanCard } from "./kanban-card"
-import { Badge } from "@/components/ui/badge"
+
+const mono: React.CSSProperties = { fontFamily: "'IBM Plex Mono', monospace" }
 
 interface Opportunity {
   id: string
@@ -28,9 +29,10 @@ interface Stage {
 interface KanbanColumnProps {
   stage: Stage
   isDragging: boolean
+  onCardClick?: (id: string) => void
 }
 
-export function KanbanColumn({ stage, isDragging }: KanbanColumnProps) {
+export function KanbanColumn({ stage, isDragging, onCardClick }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: stage.id,
     data: { stageId: stage.id },
@@ -41,21 +43,31 @@ export function KanbanColumn({ stage, isDragging }: KanbanColumnProps) {
   return (
     <div className="flex flex-col w-72 shrink-0">
       {/* Header da coluna */}
-      <div className="flex items-center justify-between mb-3 px-1">
-        <div className="flex items-center gap-2">
-          <div
-            className="w-2.5 h-2.5 rounded-full shrink-0"
-            style={{ backgroundColor: stage.color }}
-          />
-          <span className="text-sm font-semibold">{stage.name}</span>
-          <Badge variant="secondary" className="text-xs h-5">
+      <div
+        className="mb-3 px-1 pb-2.5"
+        style={{ borderBottom: `2px solid ${stage.color}` }}
+      >
+        <div className="flex items-center justify-between">
+          <span
+            style={{
+              fontFamily: "'Barlow Condensed', sans-serif",
+              fontWeight: 700,
+              fontSize: "15px",
+              color: "#16181c",
+              textTransform: "uppercase",
+              letterSpacing: "0.04em",
+            }}
+          >
+            {stage.name}
+          </span>
+          <span style={{ ...mono, fontSize: "11px", color: "#9ba1a8" }}>
             {stage.opportunities.length}
-          </Badge>
+          </span>
         </div>
         {totalValue > 0 && (
-          <span className="text-xs text-muted-foreground">
+          <p style={{ ...mono, fontSize: "12px", color: "#b5652f", marginTop: "2px" }}>
             {formatCurrency(totalValue)}
-          </span>
+          </p>
         )}
       </div>
 
@@ -63,9 +75,9 @@ export function KanbanColumn({ stage, isDragging }: KanbanColumnProps) {
       <div
         ref={setNodeRef}
         className={cn(
-          "flex-1 min-h-[400px] rounded-xl p-2 space-y-2 transition-colors",
-          "bg-muted/40 border border-transparent",
-          isOver && isDragging && "border-accent bg-accent/5"
+          "flex-1 min-h-[400px] p-2 space-y-2 transition-colors",
+          "bg-[#f5f6f7]",
+          isOver && isDragging && "bg-[#eceef0]"
         )}
       >
         <SortableContext
@@ -73,13 +85,13 @@ export function KanbanColumn({ stage, isDragging }: KanbanColumnProps) {
           strategy={verticalListSortingStrategy}
         >
           {stage.opportunities.map((opp) => (
-            <KanbanCard key={opp.id} opportunity={opp} stageId={stage.id} />
+            <KanbanCard key={opp.id} opportunity={opp} stageId={stage.id} onCardClick={onCardClick} />
           ))}
         </SortableContext>
 
         {stage.opportunities.length === 0 && (
           <div className="h-24 flex items-center justify-center">
-            <p className="text-xs text-muted-foreground/50">Arraste aqui</p>
+            <p style={{ ...mono, fontSize: "11px", color: "#9ba1a8" }}>Arraste aqui</p>
           </div>
         )}
       </div>

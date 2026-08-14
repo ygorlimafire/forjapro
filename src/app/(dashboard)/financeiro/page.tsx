@@ -38,11 +38,12 @@ function TabLink({ tab, current, children }: { tab: Tab; current: Tab; children:
   return (
     <Link
       href={`?tab=${tab}`}
+      style={{ fontFamily: "'Barlow Condensed', sans-serif" }}
       className={cn(
-        "px-4 py-2 text-sm font-medium rounded-lg transition-colors whitespace-nowrap",
+        "px-4 py-2.5 font-bold text-[13px] uppercase tracking-[0.02em] border-b-2 -mb-px transition-colors whitespace-nowrap",
         current === tab
-          ? "bg-background shadow-sm text-foreground"
-          : "text-muted-foreground hover:text-foreground"
+          ? "border-[#b5652f] text-[#16181c]"
+          : "border-transparent text-[#9ba1a8] hover:text-[#16181c]"
       )}
     >
       {children}
@@ -50,15 +51,17 @@ function TabLink({ tab, current, children }: { tab: Tab; current: Tab; children:
   )
 }
 
+const mono: React.CSSProperties = { fontFamily: "'IBM Plex Mono', monospace" }
+
 function SummaryCard({ label, value, sub, variant, icon }: {
   label: string; value: number; sub?: string; variant?: "green" | "red" | "blue" | "yellow"; icon?: React.ReactNode
 }) {
-  const color = { green: "text-green-600 dark:text-green-400", red: "text-red-600 dark:text-red-400", blue: "text-blue-600 dark:text-blue-400", yellow: "text-yellow-600 dark:text-yellow-400" }[variant ?? "blue"]
+  const color = { green: "#3f7d4e", red: "#b23b32", blue: "#2b5fa3", yellow: "#8a6d00" }[variant ?? "blue"]
   return (
-    <div className="rounded-xl border bg-card p-4 space-y-1">
-      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">{icon}{label}</div>
-      <p className={cn("text-lg font-bold", color)}>{formatCurrency(value)}</p>
-      {sub && <p className="text-xs text-muted-foreground">{sub}</p>}
+    <div className="bg-white border border-[#dde0e3] p-4">
+      <div style={{ ...mono, fontSize: "10px", color: "#9ba1a8", letterSpacing: "0.04em", textTransform: "uppercase", display: "flex", alignItems: "center", gap: "4px" }}>{icon}{label}</div>
+      <p style={{ ...mono, fontWeight: 600, fontSize: "18px", color, marginTop: "6px", lineHeight: 1.1 }}>{formatCurrency(value)}</p>
+      {sub && <p style={{ ...mono, fontSize: "10px", color: "#9ba1a8", marginTop: "4px" }}>{sub}</p>}
     </div>
   )
 }
@@ -75,10 +78,10 @@ function StatusFilter({ tab, current }: { tab: "receber" | "pagar"; current: str
           key={s}
           href={s ? `?tab=${tab}&status=${s}` : `?tab=${tab}`}
           className={cn(
-            "px-3 py-1 rounded-full text-xs font-medium border transition-colors",
+            "inline-flex items-center px-3.5 py-1.5 text-[12px] font-semibold transition-colors",
             (current ?? "") === s
-              ? "bg-foreground text-background border-foreground"
-              : "bg-background text-muted-foreground border-input hover:text-foreground"
+              ? "bg-[#16181c] text-white"
+              : "border border-[#dde0e3] text-[#6b7178] hover:border-[#b5652f] hover:text-[#16181c]"
           )}
         >
           {label}
@@ -112,13 +115,19 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sea
   ])
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Financeiro</h1>
+    <div className="p-6 bg-background min-h-full">
+      {/* ── Header ── */}
+      <div className="mb-6">
+        <p style={{ ...mono, fontSize: "11px", color: "#9ba1a8", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+          FINANÇAS
+        </p>
+        <h1 style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: "34px", color: "#16181c", lineHeight: 1, marginTop: "2px" }}>
+          Financeiro
+        </h1>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 p-1 bg-muted rounded-xl overflow-x-auto">
+      {/* ── Tabs ── */}
+      <div className="flex border-b border-[#dde0e3] overflow-x-auto mb-6">
         {TABS.map(({ id, label }) => (
           <TabLink key={id} tab={id} current={tab}>{label}</TabLink>
         ))}
@@ -131,7 +140,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sea
 
       {/* ── Contas a Receber ── */}
       {tab === "receber" && recData !== null && (
-        <div className="space-y-4">
+        <div className="space-y-3">
           <StatusFilter tab="receber" current={params.status} />
           <Suspense>
             <ReceivablesList receivables={recData} bankAccounts={bankAccounts ?? []} />
@@ -141,7 +150,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sea
 
       {/* ── Contas a Pagar ── */}
       {tab === "pagar" && payData !== null && (
-        <div className="space-y-4">
+        <div className="space-y-3">
           <StatusFilter tab="pagar" current={params.status} />
           <Suspense>
             <PayablesList payables={payData} bankAccounts={bankAccounts ?? []} expenseCategories={expenseCategories ?? []} suppliers={payableSuppliers ?? []} />
@@ -151,32 +160,36 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sea
 
       {/* ── Fluxo de Caixa ── */}
       {tab === "fluxo" && summary !== null && (
-        <div className="space-y-6">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4" style={{ gap: "2px" }}>
             <SummaryCard label="Saldo realizado" value={summary.realizedBalance} sub={`Entradas: ${formatCurrency(summary.realizedIn)}`} variant={summary.realizedBalance >= 0 ? "green" : "red"} icon={summary.realizedBalance >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />} />
             <SummaryCard label="Saldo previsto" value={summary.forecastBalance} sub={`Pendentes: ${formatCurrency(summary.forecastIn)} / ${formatCurrency(summary.forecastOut)}`} variant={summary.forecastBalance >= 0 ? "blue" : "yellow"} icon={<Clock size={12} />} />
             <SummaryCard label="Recebíveis vencidos" value={summary.overdueIn} variant="red" icon={<AlertTriangle size={12} />} />
             <SummaryCard label="Pagamentos vencidos" value={summary.overdueOut} variant="red" icon={<AlertTriangle size={12} />} />
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-xl border bg-card p-4">
-              <p className="text-xs text-muted-foreground mb-2">A receber — próximos 7 dias</p>
-              <p className="text-base font-bold text-green-600 dark:text-green-400">{formatCurrency(summary.due7In)}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">30 dias: {formatCurrency(summary.due30In)}</p>
+          <div className="grid grid-cols-2 gap-px">
+            <div className="bg-white border border-[#dde0e3] p-4">
+              <p style={{ ...mono, fontSize: "10px", color: "#9ba1a8", textTransform: "uppercase", letterSpacing: "0.04em" }}>A receber — próximos 7 dias</p>
+              <p style={{ ...mono, fontWeight: 600, fontSize: "18px", color: "#3f7d4e", marginTop: "6px" }}>{formatCurrency(summary.due7In)}</p>
+              <p style={{ ...mono, fontSize: "10px", color: "#9ba1a8", marginTop: "4px" }}>30 dias: {formatCurrency(summary.due30In)}</p>
             </div>
-            <div className="rounded-xl border bg-card p-4">
-              <p className="text-xs text-muted-foreground mb-2">A pagar — próximos 7 dias</p>
-              <p className="text-base font-bold text-red-600 dark:text-red-400">{formatCurrency(summary.due7Out)}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">30 dias: {formatCurrency(summary.due30Out)}</p>
+            <div className="bg-white border border-[#dde0e3] p-4">
+              <p style={{ ...mono, fontSize: "10px", color: "#9ba1a8", textTransform: "uppercase", letterSpacing: "0.04em" }}>A pagar — próximos 7 dias</p>
+              <p style={{ ...mono, fontWeight: 600, fontSize: "18px", color: "#b23b32", marginTop: "6px" }}>{formatCurrency(summary.due7Out)}</p>
+              <p style={{ ...mono, fontSize: "10px", color: "#9ba1a8", marginTop: "4px" }}>30 dias: {formatCurrency(summary.due30Out)}</p>
             </div>
           </div>
-          <div className="rounded-xl border bg-card p-4">
-            <h2 className="text-sm font-semibold mb-4">Entradas e saídas mensais</h2>
+          <div className="bg-white border border-[#dde0e3] p-4">
+            <p style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: "13px", color: "#16181c", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "16px" }}>
+              Entradas e saídas mensais
+            </p>
             <CashFlowChart data={summary.monthlySeries} />
           </div>
           {transactions !== null && (
-            <div className="rounded-xl border bg-card p-4">
-              <h2 className="text-sm font-semibold mb-4">Movimentações realizadas</h2>
+            <div className="bg-white border border-[#dde0e3] p-4">
+              <p style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: "13px", color: "#16181c", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "16px" }}>
+                Movimentações realizadas
+              </p>
               <CashFlowTransactions transactions={transactions} />
             </div>
           )}

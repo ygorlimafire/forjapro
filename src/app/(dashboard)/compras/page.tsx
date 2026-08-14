@@ -1,139 +1,150 @@
 import Link from "next/link"
 import { getPurchaseOrders } from "@/actions/purchases"
 import { formatCurrency, formatDate } from "@/lib/utils"
-import { Card, CardContent } from "@/components/ui/card"
-import { buttonVariants } from "@/components/ui/button"
-import { Plus, ShoppingCart, AlertTriangle } from "lucide-react"
+import { StatusBadge } from "@/components/ui/status-badge"
+import { ShoppingCart, AlertTriangle } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { PurchaseOrderStatus } from "@prisma/client"
 import type { PageProps } from "@/types"
+
+const mono: React.CSSProperties = { fontFamily: "'IBM Plex Mono', monospace" }
 
 const STATUS_LABEL: Record<PurchaseOrderStatus, string> = {
   RASCUNHO: "Rascunho",
   ENVIADO: "Enviado",
   CONFIRMADO: "Confirmado",
-  RECEBIDO_PARCIAL: "Recebido parcial",
+  RECEBIDO_PARCIAL: "Parcial",
   RECEBIDO_TOTAL: "Recebido",
   CANCELADO: "Cancelado",
 }
 
-const STATUS_COLOR: Record<PurchaseOrderStatus, string> = {
-  RASCUNHO: "text-gray-600 bg-gray-50 border-gray-200 dark:text-gray-400 dark:bg-gray-900/30 dark:border-gray-800",
-  ENVIADO: "text-blue-700 bg-blue-50 border-blue-200 dark:text-blue-400 dark:bg-blue-950/30 dark:border-blue-900/50",
-  CONFIRMADO: "text-purple-700 bg-purple-50 border-purple-200 dark:text-purple-400 dark:bg-purple-950/30 dark:border-purple-900/50",
-  RECEBIDO_PARCIAL: "text-orange-700 bg-orange-50 border-orange-200 dark:text-orange-400 dark:bg-orange-950/30 dark:border-orange-900/50",
-  RECEBIDO_TOTAL: "text-green-700 bg-green-50 border-green-200 dark:text-green-400 dark:bg-green-950/30 dark:border-green-900/50",
-  CANCELADO: "text-red-700 bg-red-50 border-red-200 dark:text-red-400 dark:bg-red-950/30 dark:border-red-900/50",
+const STATUSES: PurchaseOrderStatus[] = [
+  "RASCUNHO", "ENVIADO", "CONFIRMADO", "RECEBIDO_PARCIAL", "RECEBIDO_TOTAL", "CANCELADO",
+]
+
+// Map purchase status to StatusBadge variant keys
+const STATUS_MAP: Record<PurchaseOrderStatus, string> = {
+  RASCUNHO: "RASCUNHO",
+  ENVIADO: "ENVIADA",
+  CONFIRMADO: "CONFIRMADO",
+  RECEBIDO_PARCIAL: "PENDENTE",
+  RECEBIDO_TOTAL: "RECEBIDA",
+  CANCELADO: "CANCELADO",
 }
 
 export default async function ComprasPage({ searchParams }: PageProps) {
   const sp = await searchParams
   const status = sp.status as PurchaseOrderStatus | undefined
-  const supplierId = sp.fornecedor as string | undefined
 
-  const orders = await getPurchaseOrders({ status, supplierId })
+  const orders = await getPurchaseOrders({ status })
 
-  const statuses: PurchaseOrderStatus[] = [
-    "RASCUNHO", "ENVIADO", "CONFIRMADO", "RECEBIDO_PARCIAL", "RECEBIDO_TOTAL", "CANCELADO",
-  ]
+  function chipClass(active: boolean) {
+    return cn(
+      "inline-flex items-center px-3.5 py-1.5 text-[12px] font-semibold transition-colors",
+      active
+        ? "bg-[#16181c] text-white"
+        : "border border-[#dde0e3] text-[#6b7178] hover:border-[#b5652f] hover:text-[#16181c]"
+    )
+  }
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between gap-4">
+    <div className="p-6 bg-background min-h-full">
+      {/* ── Header ── */}
+      <div className="flex items-end justify-between mb-6 flex-wrap gap-3">
         <div>
-          <h1 className="text-xl font-bold">Pedidos de Compra</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            {orders.length} pedido{orders.length !== 1 ? "s" : ""}
-            {status ? ` · ${STATUS_LABEL[status]}` : ""}
+          <p style={{ ...mono, fontSize: "11px", color: "#9ba1a8", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+            SUPRIMENTOS
           </p>
+          <h1 style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: "34px", color: "#16181c", lineHeight: 1, marginTop: "2px" }}>
+            Compras
+          </h1>
         </div>
-        <div className="flex gap-2">
-          <Link href="/compras/sugeridas" className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
-            <AlertTriangle size={14} />
-            Compras sugeridas
+        <div className="flex gap-2 items-center">
+          <Link
+            href="/compras/sugeridas"
+            className="inline-flex items-center gap-1.5 px-4 py-2 border border-[#dde0e3] font-display font-bold text-[13px] uppercase tracking-[0.02em] text-[#6b7178] hover:border-[#b5652f] hover:text-[#16181c] transition-colors"
+          >
+            <AlertTriangle size={13} />
+            Sugeridas
           </Link>
-          <Link href="/compras/nova" className={cn(buttonVariants({ size: "sm" }))}>
-            <Plus size={14} />
-            Nova compra
+          <Link
+            href="/compras/nova"
+            className="btn-clip text-white inline-flex items-center px-5 py-2.5 font-display font-bold text-[14px] uppercase tracking-[0.02em]"
+          >
+            Nova Compra
           </Link>
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-2">
-        <Link
-          href="/compras"
-          className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-            !status
-              ? "bg-foreground text-background border-foreground"
-              : "border-border hover:bg-muted"
-          }`}
-        >
-          Todos
-        </Link>
-        {statuses.map((s) => (
-          <Link
-            key={s}
-            href={`/compras?status=${s}`}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-              status === s
-                ? "bg-foreground text-background border-foreground"
-                : "border-border hover:bg-muted"
-            }`}
-          >
-            {STATUS_LABEL[s]}
+      {/* ── Status chips ── */}
+      <div className="flex flex-wrap gap-2 mb-4">
+        <Link href="/compras"><span className={chipClass(!status)}>Todos</span></Link>
+        {STATUSES.map((s) => (
+          <Link key={s} href={`/compras?status=${s}`}>
+            <span className={chipClass(status === s)}>{STATUS_LABEL[s]}</span>
           </Link>
         ))}
       </div>
 
-      {/* List */}
-      {orders.length === 0 ? (
-        <Card>
-          <CardContent className="py-20 text-center">
-            <ShoppingCart size={40} className="mx-auto text-muted-foreground/30 mb-4" />
-            <p className="text-muted-foreground font-medium">Nenhum pedido de compra encontrado</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              Crie um novo pedido ou verifique as compras sugeridas.
-            </p>
-            <div className="flex gap-2 justify-center mt-4">
-              <Link href="/compras/sugeridas" className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
-                Ver sugeridas
-              </Link>
-              <Link href="/compras/nova" className={cn(buttonVariants({ size: "sm" }))}>
-                Nova compra
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-2">
-          {orders.map((po) => {
-            const supplierName = po.supplier.tradeName || po.supplier.companyName
-            return (
-              <Link key={po.id} href={`/compras/${po.id}`}>
-                <div className="flex items-center gap-4 p-4 rounded-xl border bg-card hover:bg-muted/50 transition-colors">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1 flex-wrap">
-                      <span className="font-mono font-semibold text-sm">{po.number}</span>
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${STATUS_COLOR[po.status]}`}>
-                        {STATUS_LABEL[po.status]}
-                      </span>
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      {supplierName} · {po._count.items} item{po._count.items !== 1 ? "s" : ""}
-                      {po.expectedAt ? ` · Previsão: ${formatDate(po.expectedAt)}` : ""}
-                    </p>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className="font-semibold text-sm">{formatCurrency(Number(po.totalAmount))}</p>
-                    <p className="text-xs text-muted-foreground">{formatDate(po.createdAt)}</p>
-                  </div>
-                </div>
-              </Link>
-            )
-          })}
+      {/* ── Table ── */}
+      <div className="bg-white border border-[#dde0e3]">
+        {/* Desktop header */}
+        <div
+          className="hidden sm:grid px-4 py-2.5 bg-[#f5f6f7]"
+          style={{ ...mono, fontSize: "11px", color: "#9ba1a8", gridTemplateColumns: "0.5fr 1.5fr 1fr 0.9fr 0.9fr" }}
+        >
+          <div>Nº</div>
+          <div>FORNECEDOR</div>
+          <div>VALOR</div>
+          <div>DATA</div>
+          <div>STATUS</div>
         </div>
+
+        {orders.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-14 gap-2">
+            <ShoppingCart size={32} className="text-[#dde0e3]" />
+            <p className="text-[13px] text-[#9ba1a8]">Nenhum pedido de compra encontrado</p>
+          </div>
+        ) : (
+          orders.map((po) => {
+            const supplierName = po.supplier.tradeName || po.supplier.companyName
+            const badgeStatus = STATUS_MAP[po.status]
+
+            return (
+              <div key={po.id} className="border-t border-[#eceef0] group">
+                {/* Desktop */}
+                <Link
+                  href={`/compras/${po.id}`}
+                  className="hidden sm:grid items-center px-4 py-3.5 text-[14px] hover:bg-[#f5f6f7] transition-colors"
+                  style={{ gridTemplateColumns: "0.5fr 1.5fr 1fr 0.9fr 0.9fr" }}
+                >
+                  <div style={{ ...mono, fontSize: "12px", color: "#9ba1a8" }}>{po.number}</div>
+                  <div className="font-semibold text-[#16181c] truncate pr-3">{supplierName}</div>
+                  <div style={{ ...mono, fontSize: "13px" }}>{formatCurrency(Number(po.totalAmount))}</div>
+                  <div className="text-[#6b7178] text-[13px]">{formatDate(po.createdAt)}</div>
+                  <div><StatusBadge status={badgeStatus} /></div>
+                </Link>
+
+                {/* Mobile */}
+                <Link href={`/compras/${po.id}`} className="sm:hidden block px-4 py-3.5 hover:bg-[#f5f6f7] transition-colors">
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <span className="font-semibold text-[14px] text-[#16181c] truncate">{supplierName}</span>
+                    <StatusBadge status={badgeStatus} />
+                  </div>
+                  <p style={mono} className="text-[11px] text-[#9ba1a8]">
+                    {po.number} · {formatCurrency(Number(po.totalAmount))} · {formatDate(po.createdAt)}
+                  </p>
+                </Link>
+              </div>
+            )
+          })
+        )}
+      </div>
+
+      {orders.length > 0 && (
+        <p style={mono} className="mt-3 text-[11px] text-[#9ba1a8]">
+          {orders.length} pedido{orders.length !== 1 ? "s" : ""}
+        </p>
       )}
     </div>
   )

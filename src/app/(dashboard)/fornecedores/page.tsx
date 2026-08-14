@@ -1,14 +1,17 @@
 import { getSuppliersList } from "@/actions/suppliers"
 import Link from "next/link"
-import { Plus, Pencil, Globe, Package, Wrench, Receipt, HelpCircle } from "lucide-react"
+import { StatusBadge } from "@/components/ui/status-badge"
+import { Package } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { SupplierType } from "@prisma/client"
 
-const TYPE_CONFIG: Record<SupplierType, { label: string; icon: React.ReactNode; className: string }> = {
-  PRODUTO: { label: "Produto", icon: <Package size={11} />, className: "text-blue-700 bg-blue-50 border-blue-200 dark:text-blue-400 dark:bg-blue-950/30 dark:border-blue-900/50" },
-  SERVICO: { label: "Serviço", icon: <Wrench size={11} />, className: "text-purple-700 bg-purple-50 border-purple-200 dark:text-purple-400 dark:bg-purple-950/30 dark:border-purple-900/50" },
-  DESPESA_FIXA: { label: "Despesa Fixa", icon: <Receipt size={11} />, className: "text-orange-700 bg-orange-50 border-orange-200 dark:text-orange-400 dark:bg-orange-950/30 dark:border-orange-900/50" },
-  OUTRO: { label: "Outro", icon: <HelpCircle size={11} />, className: "text-muted-foreground bg-muted border-border" },
+const mono: React.CSSProperties = { fontFamily: "'IBM Plex Mono', monospace" }
+
+const TYPE_LABELS: Record<SupplierType, string> = {
+  PRODUTO: "Produto",
+  SERVICO: "Serviço",
+  DESPESA_FIXA: "Despesa Fixa",
+  OUTRO: "Outro",
 }
 
 interface SearchParams {
@@ -43,109 +46,115 @@ export default async function FornecedoresPage({ searchParams }: { searchParams:
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Fornecedores</h1>
+    <div className="p-6 bg-background min-h-full">
+      {/* ── Header ── */}
+      <div className="flex items-end justify-between mb-6 flex-wrap gap-3">
+        <div>
+          <p style={{ ...mono, fontSize: "11px", color: "#9ba1a8", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+            COMPRAS
+          </p>
+          <h1 style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: "34px", color: "#16181c", lineHeight: 1, marginTop: "2px" }}>
+            Fornecedores
+          </h1>
+        </div>
         <Link
           href="/fornecedores/novo"
-          className="flex items-center gap-2 h-9 px-4 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+          className="btn-clip text-white inline-flex items-center px-5 py-2.5 font-display font-bold text-[14px] uppercase tracking-[0.02em]"
         >
-          <Plus size={15} />
-          Novo fornecedor
+          Novo Fornecedor
         </Link>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="flex gap-1.5">
-          {types.map((t) => (
-            <Link
-              key={t.value}
-              href={filterHref(t.value)}
-              className={cn(
-                "px-3 py-1 rounded-full text-xs font-medium border transition-colors",
-                (typeFilter ?? "") === t.value
-                  ? "bg-foreground text-background border-foreground"
-                  : "bg-background text-muted-foreground border-input hover:text-foreground"
-              )}
-            >
+      {/* ── Type chips ── */}
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        {types.map((t) => (
+          <Link key={t.value} href={filterHref(t.value)}>
+            <span className={cn(
+              "inline-flex items-center px-3.5 py-1.5 text-[12px] font-semibold transition-colors",
+              (typeFilter ?? "") === t.value
+                ? "bg-[#16181c] text-white"
+                : "border border-[#dde0e3] text-[#6b7178] hover:border-[#b5652f] hover:text-[#16181c]"
+            )}>
               {t.label}
-            </Link>
-          ))}
-        </div>
+            </span>
+          </Link>
+        ))}
         <Link
-          href={showInactive ? filterHref(typeFilter ?? "") : (typeFilter ? `?tipo=${typeFilter}&inativo=1` : "?inativo=1")}
-          className={cn(
-            "ml-auto text-xs underline",
-            showInactive ? "text-foreground" : "text-muted-foreground hover:text-foreground"
-          )}
+          href={showInactive
+            ? filterHref(typeFilter ?? "")
+            : (typeFilter ? `?tipo=${typeFilter}&inativo=1` : "?inativo=1")}
+          className="ml-auto text-[12px] font-semibold text-[#6b7178] hover:text-[#16181c] transition-colors"
         >
           {showInactive ? "Ocultar inativos" : "Mostrar inativos"}
         </Link>
       </div>
 
-      {/* List */}
-      {suppliers.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 text-center">
-          <Package size={40} className="text-muted-foreground/30 mb-3" />
-          <p className="text-sm text-muted-foreground">Nenhum fornecedor encontrado</p>
-          <Link href="/fornecedores/novo" className="mt-2 text-sm text-primary hover:underline">
-            Cadastrar primeiro fornecedor
-          </Link>
+      {/* ── Table container ── */}
+      <div className="bg-white border border-[#dde0e3]">
+        {/* Desktop header */}
+        <div
+          className="hidden sm:grid px-4 py-2.5 bg-[#f5f6f7]"
+          style={{ ...mono, fontSize: "11px", color: "#9ba1a8", gridTemplateColumns: "2fr 1fr 1.2fr 1fr 0.7fr" }}
+        >
+          <div>NOME</div>
+          <div>TIPO</div>
+          <div>CNPJ / CPF</div>
+          <div>CONTATO</div>
+          <div>STATUS</div>
         </div>
-      ) : (
-        <div className="space-y-2">
-          {suppliers.map((s) => {
-            const config = TYPE_CONFIG[s.type]
-            const displayName = s.tradeName || s.companyName
-            const isIntl = s.country !== "BR"
+
+        {/* Rows */}
+        {suppliers.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-14 gap-2">
+            <Package size={32} className="text-[#dde0e3]" />
+            <p className="text-[13px] text-[#9ba1a8]">Nenhum fornecedor encontrado</p>
+          </div>
+        ) : (
+          suppliers.map((s) => {
+            const name = s.tradeName || s.companyName
+            const status = s.isActive ? "ATIVO" : "INATIVO"
+            const contact = s.phone || s.email || "—"
 
             return (
-              <div
-                key={s.id}
-                className={cn(
-                  "flex items-center gap-4 p-4 rounded-xl border bg-card",
-                  !s.isActive && "opacity-50"
-                )}
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap mb-0.5">
-                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${config.className}`}>
-                      {config.icon}
-                      {config.label}
-                    </span>
-                    {isIntl && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border text-muted-foreground bg-muted border-border">
-                        <Globe size={10} />
-                        {s.country} · {s.currency}
-                      </span>
-                    )}
-                    {!s.isActive && (
-                      <span className="text-xs text-muted-foreground">(Inativo)</span>
-                    )}
-                  </div>
-                  <p className="text-sm font-semibold">{displayName}</p>
-                  {s.tradeName && s.tradeName !== s.companyName && (
-                    <p className="text-xs text-muted-foreground">{s.companyName}</p>
-                  )}
-                  <div className="flex flex-wrap gap-3 mt-1 text-xs text-muted-foreground">
-                    {s.document && <span>{s.document}</span>}
-                    {s.phone && <span>{s.phone}</span>}
-                    {s.email && <span>{s.email}</span>}
-                    {s.city && <span>{s.city}{s.state ? `, ${s.state}` : ""}</span>}
-                  </div>
-                </div>
+              <div key={s.id} className="border-t border-[#eceef0] group">
+                {/* Desktop row */}
                 <Link
                   href={`/fornecedores/${s.id}`}
-                  className="shrink-0 flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+                  className="hidden sm:grid items-center px-4 py-3.5 text-[14px] hover:bg-[#f5f6f7] transition-colors"
+                  style={{ gridTemplateColumns: "2fr 1fr 1.2fr 1fr 0.7fr" }}
                 >
-                  <Pencil size={13} />
-                  Editar
+                  <div className="font-semibold text-[#16181c] truncate pr-3 group-hover:text-[#b5652f]">
+                    {name}
+                    {s.tradeName && s.companyName && s.tradeName !== s.companyName && (
+                      <span className="block text-[12px] font-normal text-[#6b7178]">{s.companyName}</span>
+                    )}
+                  </div>
+                  <div className="text-[#6b7178] text-[13px]">{TYPE_LABELS[s.type]}</div>
+                  <div style={mono} className="text-[#6b7178] text-[13px]">{s.document || "—"}</div>
+                  <div style={mono} className="text-[#6b7178] text-[13px] truncate pr-3">{contact}</div>
+                  <div><StatusBadge status={status} /></div>
+                </Link>
+
+                {/* Mobile row */}
+                <Link href={`/fornecedores/${s.id}`} className="sm:hidden block px-4 py-3.5 hover:bg-[#f5f6f7] transition-colors">
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <span className="font-semibold text-[14px] text-[#16181c] truncate">{name}</span>
+                    <StatusBadge status={status} />
+                  </div>
+                  <p className="text-[12px] text-[#6b7178]">
+                    {TYPE_LABELS[s.type]}{contact !== "—" ? ` · ${contact}` : ""}
+                  </p>
                 </Link>
               </div>
             )
-          })}
-        </div>
+          })
+        )}
+      </div>
+
+      {suppliers.length > 0 && (
+        <p style={mono} className="mt-3 text-[11px] text-[#9ba1a8]">
+          {suppliers.length} {suppliers.length === 1 ? "fornecedor" : "fornecedores"}
+        </p>
       )}
     </div>
   )

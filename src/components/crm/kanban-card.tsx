@@ -2,9 +2,10 @@
 
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import { cn, formatCurrency, formatDate } from "@/lib/utils"
-import { Card, CardContent } from "@/components/ui/card"
-import { Building2, User, Calendar, DollarSign, GripVertical } from "lucide-react"
+import { formatCurrency, formatDate } from "@/lib/utils"
+import { GripVertical } from "lucide-react"
+
+const mono: React.CSSProperties = { fontFamily: "'IBM Plex Mono', monospace" }
 
 interface Opportunity {
   id: string
@@ -19,9 +20,10 @@ interface Opportunity {
 interface KanbanCardProps {
   opportunity: Opportunity
   stageId: string
+  onCardClick?: (id: string) => void
 }
 
-export function KanbanCard({ opportunity, stageId }: KanbanCardProps) {
+export function KanbanCard({ opportunity, stageId, onCardClick }: KanbanCardProps) {
   const {
     attributes,
     listeners,
@@ -37,6 +39,7 @@ export function KanbanCard({ opportunity, stageId }: KanbanCardProps) {
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
+    opacity: isDragging ? 0.4 : 1,
   }
 
   const customerName =
@@ -46,69 +49,90 @@ export function KanbanCard({ opportunity, stageId }: KanbanCardProps) {
 
   return (
     <div ref={setNodeRef} style={style} {...attributes}>
-      <Card
-        className={cn(
-          "cursor-grab active:cursor-grabbing select-none transition-shadow",
-          isDragging && "opacity-40 shadow-none"
-        )}
+      <div
+        style={{
+          background: "#fff",
+          border: "1px solid #dde0e3",
+          padding: "14px",
+          position: "relative",
+          cursor: "pointer",
+          userSelect: "none",
+        }}
+        onClick={() => onCardClick?.(opportunity.id)}
       >
-        <CardContent className="p-3 space-y-2">
-          <div className="flex items-start gap-2">
-            <div
-              className="text-muted-foreground/40 hover:text-muted-foreground transition-colors mt-0.5 shrink-0"
-              {...listeners}
-            >
-              <GripVertical size={14} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold leading-tight truncate">
-                {opportunity.title}
-              </p>
-            </div>
+        {/* Copper triangle top-right */}
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            right: 0,
+            width: 10,
+            height: 10,
+            background: "#b5652f",
+            clipPath: "polygon(100% 0, 100% 100%, 0 0)",
+          }}
+        />
+
+        {/* Grip + title */}
+        <div className="flex items-start gap-2 mb-2">
+          <div
+            className="text-[#dde0e3] hover:text-[#9ba1a8] transition-colors mt-0.5 shrink-0"
+            {...listeners}
+          >
+            <GripVertical size={14} />
           </div>
+          <p style={{ fontWeight: 600, fontSize: "14px", color: "#16181c", lineHeight: 1.3, flex: 1 }}>
+            {opportunity.title}
+          </p>
+        </div>
 
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Building2 size={11} />
-            <span className="truncate">{customerName}</span>
-          </div>
+        {/* Customer */}
+        <p style={{ ...mono, fontSize: "11px", color: "#9ba1a8", marginBottom: "8px", paddingLeft: "22px" }}>
+          {customerName}
+        </p>
 
-          {opportunity.value && (
-            <div className="flex items-center gap-1.5 text-xs font-medium">
-              <DollarSign size={11} className="text-accent" />
-              <span>{formatCurrency(Number(opportunity.value))}</span>
+        {/* Value */}
+        {opportunity.value && (
+          <p style={{ ...mono, fontSize: "14px", color: "#b5652f", fontWeight: 600, paddingLeft: "22px" }}>
+            {formatCurrency(Number(opportunity.value))}
+          </p>
+        )}
+
+        {/* Probability bar */}
+        {opportunity.probability != null && (
+          <div style={{ marginTop: "10px", paddingLeft: "22px" }}>
+            <div style={{ height: "2px", background: "#eceef0" }}>
+              <div
+                style={{
+                  height: "100%",
+                  background: "#b5652f",
+                  width: `${opportunity.probability}%`,
+                  transition: "width 0.3s",
+                }}
+              />
             </div>
-          )}
+            <p style={{ ...mono, fontSize: "10px", color: "#9ba1a8", marginTop: "3px", textAlign: "right" }}>
+              {opportunity.probability}%
+            </p>
+          </div>
+        )}
 
-          <div className="flex items-center justify-between gap-2">
+        {/* Footer: assignee + close date */}
+        {(opportunity.assignee || opportunity.expectedClose) && (
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "8px", paddingLeft: "22px" }}>
             {opportunity.assignee && (
-              <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                <User size={10} />
-                <span className="truncate max-w-20">{opportunity.assignee.name}</span>
-              </div>
+              <span style={{ ...mono, fontSize: "10px", color: "#9ba1a8" }}>
+                {opportunity.assignee.name}
+              </span>
             )}
             {opportunity.expectedClose && (
-              <div className="flex items-center gap-1 text-xs text-muted-foreground ml-auto">
-                <Calendar size={10} />
-                <span>{formatDate(opportunity.expectedClose)}</span>
-              </div>
+              <span style={{ ...mono, fontSize: "10px", color: "#9ba1a8", marginLeft: "auto" }}>
+                {formatDate(opportunity.expectedClose)}
+              </span>
             )}
           </div>
-
-          {opportunity.probability != null && (
-            <div className="mt-1">
-              <div className="h-1 bg-muted rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-accent rounded-full transition-all"
-                  style={{ width: `${opportunity.probability}%` }}
-                />
-              </div>
-              <p className="text-[10px] text-muted-foreground mt-0.5 text-right">
-                {opportunity.probability}% chance
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+        )}
+      </div>
     </div>
   )
 }

@@ -180,6 +180,96 @@ export async function getKanbanData() {
   return pipeline
 }
 
+export async function getOpportunityDetail(id: string) {
+  return prisma.opportunity.findUnique({
+    where: { id },
+    include: {
+      stage: { select: { name: true, color: true } },
+      customer: {
+        select: {
+          id: true,
+          companyName: true,
+          tradeName: true,
+          phone: true,
+          email: true,
+          contacts: {
+            where: { deletedAt: null },
+            select: { name: true, role: true, phone: true, email: true, isPrimary: true },
+            orderBy: [{ isPrimary: "desc" }, { name: "asc" }],
+          },
+        },
+      },
+      assignee: { select: { id: true, name: true } },
+      activities: {
+        orderBy: { createdAt: "desc" },
+        include: { user: { select: { name: true } } },
+      },
+      proposals: {
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          number: true,
+          status: true,
+          totalAmount: true,
+          createdAt: true,
+          order: { select: { id: true, status: true } },
+        },
+      },
+    },
+  })
+}
+
+const updateOpportunitySchema = z.object({
+  title: z.string().min(2, "Título obrigatório"),
+  assignedTo: z.string().optional(),
+  value: z.number().optional(),
+  probability: z.number().min(0).max(100).optional(),
+  expectedClose: z.coerce.date().optional(),
+})
+
+export async function updateOpportunity(id: string, formData: unknown): Promise<ActionResult<void>> {
+  const session = await auth()
+  if (!session?.user) return { success: false, error: "Não autorizado" }
+
+  const parsed = updateOpportunitySchema.safeParse(formData)
+  if (!parsed.success) return { success: false, error: parsed.error.issues[0].message }
+
+  try {
+    await prisma.opportunity.update({
+      where: { id },
+      data: {
+        ...parsed.data,
+        assignedTo: parsed.data.assignedTo || null,
+      },
+    })
+    await createAuditLog({ userId: session.user.id, action: "UPDATE", entity: "Opportunity", entityId: id })
+    revalidatePath("/crm")
+    return { success: true, data: undefined }
+  } catch {
+    return { success: false, error: "Erro ao atualizar oportunidade" }
+  }
+}
+
+export async function updateOpportunityNotes(id: string, notes: string): Promise<ActionResult<void>> {
+  const session = await auth()
+  if (!session?.user) return { success: false, error: "Não autorizado" }
+
+  try {
+    await prisma.opportunity.update({ where: { id }, data: { notes } })
+    revalidatePath("/crm")
+    return { success: true, data: undefined }
+  } catch {
+    return { success: false, error: "Erro ao salvar observações" }
+  }
+}
+
+export async function getUsers() {
+  return prisma.user.findMany({
+    select: { id: true, name: true },
+    orderBy: { name: "asc" },
+  })
+}
+
 export async function getLeads(search?: string) {
   return prisma.lead.findMany({
     where: {

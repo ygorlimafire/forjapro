@@ -1,10 +1,13 @@
 import { getOrders } from "@/actions/orders"
 import { formatCurrency, formatDate } from "@/lib/utils"
-import { Card, CardContent } from "@/components/ui/card"
-import { ShoppingCart, ArrowRight, AlertTriangle } from "lucide-react"
+import { StatusBadge } from "@/components/ui/status-badge"
+import { ShoppingCart, AlertTriangle } from "lucide-react"
 import Link from "next/link"
+import { cn } from "@/lib/utils"
 import type { OrderStatus, StockAlertStatus } from "@prisma/client"
 import type { PageProps } from "@/types"
+
+const mono: React.CSSProperties = { fontFamily: "'IBM Plex Mono', monospace" }
 
 const STATUS_LABEL: Record<OrderStatus, string> = {
   PENDENTE: "Pendente",
@@ -14,25 +17,6 @@ const STATUS_LABEL: Record<OrderStatus, string> = {
   CANCELADO: "Cancelado",
 }
 
-const STATUS_COLOR: Record<OrderStatus, string> = {
-  PENDENTE: "text-yellow-700 bg-yellow-50 border-yellow-200 dark:text-yellow-400 dark:bg-yellow-950/30 dark:border-yellow-900/50",
-  CONFIRMADO: "text-blue-700 bg-blue-50 border-blue-200 dark:text-blue-400 dark:bg-blue-950/30 dark:border-blue-900/50",
-  AGUARDANDO_EXPEDICAO: "text-purple-700 bg-purple-50 border-purple-200 dark:text-purple-400 dark:bg-purple-950/30 dark:border-purple-900/50",
-  ENTREGUE: "text-green-700 bg-green-50 border-green-200 dark:text-green-400 dark:bg-green-950/30 dark:border-green-900/50",
-  CANCELADO: "text-red-700 bg-red-50 border-red-200 dark:text-red-400 dark:bg-red-950/30 dark:border-red-900/50",
-}
-
-const STOCK_BADGE: Record<Exclude<StockAlertStatus, "OK">, { label: string; className: string }> = {
-  PARCIAL: {
-    label: "Estoque parcial",
-    className: "text-orange-700 bg-orange-50 border-orange-200 dark:text-orange-400 dark:bg-orange-950/30 dark:border-orange-900/50",
-  },
-  INSUFICIENTE: {
-    label: "Sem estoque",
-    className: "text-red-700 bg-red-50 border-red-200 dark:text-red-400 dark:bg-red-950/30 dark:border-red-900/50",
-  },
-}
-
 const STATUSES: OrderStatus[] = ["PENDENTE", "CONFIRMADO", "AGUARDANDO_EXPEDICAO", "ENTREGUE", "CANCELADO"]
 
 export default async function PedidosPage({ searchParams }: PageProps) {
@@ -40,124 +24,139 @@ export default async function PedidosPage({ searchParams }: PageProps) {
   const statusFilter = (sp.status as OrderStatus | undefined) ?? undefined
   const stockAlert = sp.stock === "alerta"
 
-  const orders = await getOrders({
-    ...(statusFilter ? { status: statusFilter } : {}),
-    ...(stockAlert ? { stockAlert: true } : {}),
-  })
+  const [orders, allOrders] = await Promise.all([
+    getOrders({
+      ...(statusFilter ? { status: statusFilter } : {}),
+      ...(stockAlert ? { stockAlert: true } : {}),
+    }),
+    getOrders(),
+  ])
 
-  const allOrders = await getOrders()
   const alertCount = allOrders.filter((o) => o.stockStatus !== "OK").length
-
   const counts = allOrders.reduce((acc, o) => {
     acc[o.status] = (acc[o.status] ?? 0) + 1
     return acc
   }, {} as Record<OrderStatus, number>)
 
-  const activeTabBase = stockAlert ? "stock" : statusFilter ?? "all"
+  const activeTab = stockAlert ? "stock" : statusFilter ?? "all"
+
+  function chipClass(active: boolean) {
+    return cn(
+      "inline-flex items-center gap-1.5 px-3.5 py-1.5 text-[12px] font-semibold transition-colors",
+      active
+        ? "bg-[#16181c] text-white"
+        : "border border-[#dde0e3] text-[#6b7178] hover:border-[#b5652f] hover:text-[#16181c]"
+    )
+  }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Pedidos</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            {orders.length} pedido{orders.length !== 1 ? "s" : ""}
-            {statusFilter ? ` · ${STATUS_LABEL[statusFilter]}` : ""}
-            {stockAlert ? " · Com alerta de estoque" : ""}
-          </p>
-        </div>
+    <div className="p-6 bg-background min-h-full">
+      {/* ── Header ── */}
+      <div className="mb-6">
+        <p style={{ ...mono, fontSize: "11px", color: "#9ba1a8", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+          COMERCIAL
+        </p>
+        <h1 style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: "34px", color: "#16181c", lineHeight: 1, marginTop: "2px" }}>
+          Pedidos
+        </h1>
       </div>
 
-      {/* Status filter tabs */}
-      <div className="flex gap-2 flex-wrap">
-        <Link
-          href="/pedidos"
-          className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-            activeTabBase === "all"
-              ? "bg-foreground text-background border-foreground"
-              : "bg-background text-muted-foreground border-border hover:border-foreground/30"
-          }`}
-        >
-          Todos ({allOrders.length})
-        </Link>
+      {/* ── Status chips ── */}
+      <div className="flex flex-wrap gap-2 mb-4">
+        <Link href="/pedidos"><span className={chipClass(activeTab === "all")}>Todos ({allOrders.length})</span></Link>
         {STATUSES.map((s) => (
-          <Link
-            key={s}
-            href={`/pedidos?status=${s}`}
-            className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-              activeTabBase === s
-                ? "bg-foreground text-background border-foreground"
-                : "bg-background text-muted-foreground border-border hover:border-foreground/30"
-            }`}
-          >
-            {STATUS_LABEL[s]} ({counts[s] ?? 0})
+          <Link key={s} href={`/pedidos?status=${s}`}>
+            <span className={chipClass(activeTab === s)}>
+              {STATUS_LABEL[s]} ({counts[s] ?? 0})
+            </span>
           </Link>
         ))}
         {alertCount > 0 && (
-          <Link
-            href="/pedidos?stock=alerta"
-            className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors flex items-center gap-1.5 ${
-              activeTabBase === "stock"
-                ? "bg-orange-600 text-white border-orange-600"
-                : "text-orange-700 bg-orange-50 border-orange-200 hover:border-orange-400 dark:text-orange-400 dark:bg-orange-950/30 dark:border-orange-900/50"
-            }`}
-          >
-            <AlertTriangle size={13} />
-            Alerta de estoque ({alertCount})
+          <Link href="/pedidos?stock=alerta">
+            <span className={cn(
+              chipClass(activeTab === "stock"),
+              activeTab === "stock" ? "" : "!border-[#b23b32] !text-[#b23b32] hover:!text-[#b23b32]"
+            )}>
+              <AlertTriangle size={12} />
+              Est. insuficiente ({alertCount})
+            </span>
           </Link>
         )}
       </div>
 
-      {orders.length === 0 ? (
-        <Card>
-          <CardContent className="py-20 text-center">
-            <ShoppingCart size={40} className="mx-auto text-muted-foreground/30 mb-4" />
-            <p className="text-muted-foreground font-medium">Nenhum pedido encontrado</p>
-            <p className="text-sm text-muted-foreground mt-1">
+      {/* ── Table ── */}
+      <div className="bg-white border border-[#dde0e3]">
+        {/* Desktop header */}
+        <div
+          className="hidden sm:grid px-4 py-2.5 bg-[#f5f6f7]"
+          style={{ ...mono, fontSize: "11px", color: "#9ba1a8", gridTemplateColumns: "0.5fr 1.4fr 1fr 0.9fr 0.9fr" }}
+        >
+          <div>Nº PROP.</div>
+          <div>CLIENTE</div>
+          <div>VALOR</div>
+          <div>DATA</div>
+          <div>STATUS</div>
+        </div>
+
+        {orders.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-14 gap-2">
+            <ShoppingCart size={32} className="text-[#dde0e3]" />
+            <p className="text-[13px] text-[#9ba1a8]">
               {stockAlert
-                ? "Nenhum pedido com alerta de estoque no momento."
-                : "Pedidos são criados automaticamente ao aprovar uma proposta."}
+                ? "Nenhum pedido com alerta de estoque"
+                : "Nenhum pedido encontrado"}
             </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-2">
-          {orders.map((order) => {
+          </div>
+        ) : (
+          orders.map((order) => {
             const customerName = order.customer.companyName || order.customer.tradeName || order.customer.document
-            const stockBadge = order.stockStatus !== "OK" ? STOCK_BADGE[order.stockStatus as Exclude<StockAlertStatus, "OK">] : null
+            const hasStockAlert = order.stockStatus !== "OK"
+
             return (
-              <Link key={order.id} href={`/pedidos/${order.id}`}>
-                <div className="flex items-center gap-4 p-4 rounded-lg border bg-card hover:bg-accent/40 transition-colors group">
-                  <div className="shrink-0 flex flex-col gap-1.5">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${STATUS_COLOR[order.status]}`}>
-                      {STATUS_LABEL[order.status]}
-                    </span>
-                    {stockBadge && (
-                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${stockBadge.className}`}>
+              <div key={order.id} className="border-t border-[#eceef0] group">
+                {/* Desktop */}
+                <Link
+                  href={`/pedidos/${order.id}`}
+                  className="hidden sm:grid items-center px-4 py-3.5 text-[14px] hover:bg-[#f5f6f7] transition-colors"
+                  style={{ gridTemplateColumns: "0.5fr 1.4fr 1fr 0.9fr 0.9fr" }}
+                >
+                  <div style={{ ...mono, fontSize: "12px", color: "#9ba1a8" }}>
+                    {order.proposal.number}
+                  </div>
+                  <div className="min-w-0 pr-3">
+                    <p className="font-semibold text-[#16181c] truncate">{customerName}</p>
+                    {hasStockAlert && (
+                      <p className="flex items-center gap-1 text-[11px] text-[#b23b32] mt-0.5">
                         <AlertTriangle size={10} />
-                        {stockBadge.label}
-                      </span>
+                        {order.stockStatus === "PARCIAL" ? "Estoque parcial" : "Sem estoque"}
+                      </p>
                     )}
                   </div>
+                  <div style={{ ...mono, fontSize: "13px" }}>{formatCurrency(Number(order.totalAmount))}</div>
+                  <div className="text-[#6b7178] text-[13px]">{formatDate(order.createdAt)}</div>
+                  <div><StatusBadge status={order.status} /></div>
+                </Link>
 
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm truncate">{customerName}</p>
-                    <p className="text-xs text-muted-foreground">
-                      Proposta {order.proposal.number} · {order._count.items} item{order._count.items !== 1 ? "s" : ""} · {order.seller.name}
-                    </p>
+                {/* Mobile */}
+                <Link href={`/pedidos/${order.id}`} className="sm:hidden block px-4 py-3.5 hover:bg-[#f5f6f7] transition-colors">
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <span className="font-semibold text-[14px] text-[#16181c] truncate">{customerName}</span>
+                    <StatusBadge status={order.status} />
                   </div>
-
-                  <div className="text-right shrink-0">
-                    <p className="font-semibold text-sm">{formatCurrency(Number(order.totalAmount))}</p>
-                    <p className="text-xs text-muted-foreground">{formatDate(order.createdAt)}</p>
-                  </div>
-
-                  <ArrowRight size={16} className="text-muted-foreground/30 group-hover:text-muted-foreground transition-colors shrink-0" />
-                </div>
-              </Link>
+                  <p style={mono} className="text-[11px] text-[#9ba1a8]">
+                    {order.proposal.number} · {formatCurrency(Number(order.totalAmount))} · {formatDate(order.createdAt)}
+                  </p>
+                </Link>
+              </div>
             )
-          })}
-        </div>
+          })
+        )}
+      </div>
+
+      {orders.length > 0 && (
+        <p style={mono} className="mt-3 text-[11px] text-[#9ba1a8]">
+          {orders.length} pedido{orders.length !== 1 ? "s" : ""}
+        </p>
       )}
     </div>
   )

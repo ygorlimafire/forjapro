@@ -1,10 +1,11 @@
 import { Metadata } from "next"
 import { getKanbanData } from "@/actions/crm"
 import { KanbanBoard } from "@/components/crm/kanban-board"
-import { Card, CardContent } from "@/components/ui/card"
 import { Target } from "lucide-react"
 import { NewOpportunityDialog } from "@/components/crm/new-opportunity-dialog"
 import { getCustomers } from "@/actions/customers"
+
+const mono: React.CSSProperties = { fontFamily: "'IBM Plex Mono', monospace" }
 
 export const metadata: Metadata = { title: "CRM — Funil de Vendas" }
 
@@ -16,30 +17,29 @@ export default async function CRMPage() {
 
   if (!pipeline) {
     return (
-      <div className="p-6">
-        <Card>
-          <CardContent className="py-16 text-center">
-            <Target size={40} className="mx-auto text-muted-foreground/30 mb-4" />
-            <p className="text-muted-foreground font-medium">Nenhum funil configurado</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              O seed do banco de dados precisa ser executado para criar as etapas do funil.
-            </p>
-          </CardContent>
-        </Card>
+      <div className="p-6 bg-background min-h-full">
+        <div className="flex flex-col items-center justify-center py-24 gap-2 bg-white border border-[#dde0e3]">
+          <Target size={32} className="text-[#dde0e3]" />
+          <p style={{ ...mono, fontSize: "13px", color: "#9ba1a8" }}>Nenhum funil configurado</p>
+          <p style={{ ...mono, fontSize: "11px", color: "#9ba1a8" }}>
+            Execute o seed do banco de dados para criar as etapas do funil.
+          </p>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="p-6 bg-background min-h-full">
+      {/* ── Header ── */}
+      <div className="flex items-end justify-between mb-6 flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <Target size={22} /> CRM — {pipeline.name}
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Gerencie o funil de vendas arrastando as oportunidades entre as etapas
+          <p style={{ ...mono, fontSize: "11px", color: "#9ba1a8", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+            FUNIL DE VENDAS
           </p>
+          <h1 style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: "34px", color: "#16181c", lineHeight: 1, marginTop: "2px" }}>
+            CRM
+          </h1>
         </div>
         <NewOpportunityDialog
           stages={pipeline.stages.map((s) => ({ id: s.id, name: s.name }))}

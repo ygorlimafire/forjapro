@@ -1,12 +1,26 @@
-import { getStockList } from "@/actions/stock"
+import { getStockList, getWarehouses } from "@/actions/stock"
 import { formatCurrency } from "@/lib/utils"
-import { Card, CardContent } from "@/components/ui/card"
-import { Warehouse, AlertTriangle, ArrowRight, Package } from "lucide-react"
+import { StatusBadge } from "@/components/ui/status-badge"
+import { Warehouse, Package } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import { StockEntryDialog } from "@/components/stock/stock-entry-dialog"
 import { StockAdjustDialog } from "@/components/stock/stock-adjust-dialog"
-import { getWarehouses } from "@/actions/stock"
+
+const mono: React.CSSProperties = { fontFamily: "'IBM Plex Mono', monospace" }
+
+function KpiCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="bg-white border border-[#dde0e3] p-4">
+      <p style={{ ...mono, fontSize: "10px", color: "#9ba1a8", letterSpacing: "0.04em", textTransform: "uppercase" }}>
+        {label}
+      </p>
+      <p style={{ ...mono, fontWeight: 600, fontSize: "22px", color: "#16181c", marginTop: "6px", lineHeight: 1.1 }}>
+        {value}
+      </p>
+    </div>
+  )
+}
 
 export default async function EstoquePage() {
   const [items, warehouses] = await Promise.all([getStockList(), getWarehouses()])
@@ -17,11 +31,16 @@ export default async function EstoquePage() {
   const defaultWarehouseId = warehouses[0]?.id ?? ""
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
+    <div className="p-6 bg-background min-h-full">
+      {/* ── Header ── */}
+      <div className="flex items-end justify-between mb-6 flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Estoque</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">{items.length} produtos cadastrados</p>
+          <p style={{ ...mono, fontSize: "11px", color: "#9ba1a8", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+            CONTROLE
+          </p>
+          <h1 style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: "34px", color: "#16181c", lineHeight: 1, marginTop: "2px" }}>
+            Estoque
+          </h1>
         </div>
         <div className="flex gap-2">
           <StockAdjustDialog warehouseId={defaultWarehouseId} />
@@ -29,126 +48,107 @@ export default async function EstoquePage() {
         </div>
       </div>
 
-      {/* KPIs */}
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Valor em estoque</p>
-                <p className="text-2xl font-bold mt-1">{formatCurrency(totalValue)}</p>
-                <p className="text-xs text-muted-foreground mt-1">custo médio ponderado</p>
-              </div>
-              <Warehouse size={20} className="text-blue-500 mt-1" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card className={lowStock.length > 0 ? "border-yellow-300 dark:border-yellow-900/70" : ""}>
-          <CardContent className="pt-6">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Estoque baixo</p>
-                <p className="text-2xl font-bold mt-1">{lowStock.length}</p>
-                <p className="text-xs text-muted-foreground mt-1">produto{lowStock.length !== 1 ? "s" : ""} abaixo do mínimo</p>
-              </div>
-              <AlertTriangle size={20} className={lowStock.length > 0 ? "text-yellow-500 mt-1" : "text-muted-foreground/30 mt-1"} />
-            </div>
-          </CardContent>
-        </Card>
-        <Card className={zeroStock.length > 0 ? "border-red-300 dark:border-red-900/70" : ""}>
-          <CardContent className="pt-6">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Sem estoque</p>
-                <p className="text-2xl font-bold mt-1">{zeroStock.length}</p>
-                <p className="text-xs text-muted-foreground mt-1">produto{zeroStock.length !== 1 ? "s" : ""} zerados</p>
-              </div>
-              <Package size={20} className={zeroStock.length > 0 ? "text-red-500 mt-1" : "text-muted-foreground/30 mt-1"} />
-            </div>
-          </CardContent>
-        </Card>
+      {/* ── KPI cards ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 mb-6" style={{ gap: "2px" }}>
+        <KpiCard label="Valor em estoque" value={formatCurrency(totalValue)} />
+        <KpiCard
+          label="Estoque baixo"
+          value={`${lowStock.length} produto${lowStock.length !== 1 ? "s" : ""}`}
+        />
+        <KpiCard
+          label="Sem estoque"
+          value={`${zeroStock.length} produto${zeroStock.length !== 1 ? "s" : ""}`}
+        />
       </div>
 
-      {/* Product list */}
-      <div className="space-y-1">
-        {/* Header */}
-        <div className="hidden md:grid grid-cols-[1fr_100px_90px_90px_90px_110px_40px] gap-4 px-4 py-2 text-xs font-medium text-muted-foreground">
-          <span>Produto</span>
-          <span className="text-right">Físico</span>
-          <span className="text-right">Reservado</span>
-          <span className="text-right">Disponível</span>
-          <span className="text-right">Mínimo</span>
-          <span className="text-right">Custo médio</span>
-          <span />
+      {/* ── Table ── */}
+      <div className="bg-white border border-[#dde0e3]">
+        {/* Desktop header */}
+        <div
+          className="hidden md:grid px-4 py-2.5 bg-[#f5f6f7]"
+          style={{ ...mono, fontSize: "11px", color: "#9ba1a8", gridTemplateColumns: "2fr 1fr 0.6fr 0.6fr 1fr 0.7fr" }}
+        >
+          <div>PRODUTO</div>
+          <div>CATEGORIA</div>
+          <div>FÍSICO</div>
+          <div>DISP.</div>
+          <div>CUSTO MÉDIO</div>
+          <div>STATUS</div>
         </div>
 
         {items.length === 0 ? (
-          <Card>
-            <CardContent className="py-20 text-center">
-              <Warehouse size={40} className="mx-auto text-muted-foreground/30 mb-4" />
-              <p className="text-muted-foreground font-medium">Nenhum produto cadastrado</p>
-            </CardContent>
-          </Card>
+          <div className="flex flex-col items-center justify-center py-14 gap-2">
+            <Warehouse size={32} className="text-[#dde0e3]" />
+            <p className="text-[13px] text-[#9ba1a8]">Nenhum produto cadastrado</p>
+          </div>
         ) : (
           items.map((item) => {
             const isZero = item.availableQty === 0
             const isLow = !isZero && item.stockMin > 0 && item.availableQty <= item.stockMin
+            const stockStatus = isZero ? "ZERADO" : isLow ? "BAIXO" : "NORMAL"
 
             return (
-              <Link key={item.id} href={`/estoque/${item.id}`}>
-                <div className="grid grid-cols-[1fr_auto] md:grid-cols-[1fr_100px_90px_90px_90px_110px_40px] gap-4 items-center px-4 py-3 rounded-lg border bg-card hover:bg-accent/40 transition-colors group">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="relative w-9 h-9 rounded border bg-muted shrink-0 overflow-hidden">
+              <div key={item.id} className="border-t border-[#eceef0] group">
+                {/* Desktop */}
+                <Link
+                  href={`/estoque/${item.id}`}
+                  className="hidden md:grid items-center px-4 py-3.5 text-[14px] hover:bg-[#f5f6f7] transition-colors"
+                  style={{ gridTemplateColumns: "2fr 1fr 0.6fr 0.6fr 1fr 0.7fr" }}
+                >
+                  <div className="flex items-center gap-3 min-w-0 pr-3">
+                    <div className="relative w-8 h-8 shrink-0 bg-[#f5f6f7] border border-[#eceef0] overflow-hidden">
                       {item.mainImage ? (
                         <Image src={item.mainImage} alt="" fill className="object-cover" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
-                          <Package size={14} className="text-muted-foreground/30" />
+                          <Package size={12} className="text-[#dde0e3]" />
                         </div>
                       )}
                     </div>
                     <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium text-sm truncate">{item.name}</p>
-                        {isZero && (
-                          <span className="shrink-0 text-xs px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400 border border-red-200 dark:border-red-900/50">
-                            Zerado
-                          </span>
-                        )}
-                        {isLow && (
-                          <span className="shrink-0 text-xs px-1.5 py-0.5 rounded-full bg-yellow-100 text-yellow-700 dark:bg-yellow-950/40 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-900/50">
-                            Baixo
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs text-muted-foreground">{item.sku} · {item.category}</p>
+                      <p className="font-semibold text-[#16181c] truncate">{item.name}</p>
+                      <p style={{ ...mono, fontSize: "11px", color: "#9ba1a8" }}>{item.sku}</p>
                     </div>
                   </div>
-
-                  {/* Mobile: just show available */}
-                  <div className="md:hidden text-right">
-                    <p className={`font-semibold text-sm ${isZero ? "text-red-600" : isLow ? "text-yellow-600" : ""}`}>
-                      {item.availableQty}
-                    </p>
-                    <p className="text-xs text-muted-foreground">disponível</p>
-                  </div>
-
-                  {/* Desktop columns */}
-                  <p className="hidden md:block text-right text-sm">{item.physicalQty}</p>
-                  <p className="hidden md:block text-right text-sm text-muted-foreground">{item.reservedQty}</p>
-                  <p className={`hidden md:block text-right text-sm font-semibold ${isZero ? "text-red-600" : isLow ? "text-yellow-600" : ""}`}>
+                  <div className="text-[#6b7178] text-[13px] truncate pr-3">{item.category}</div>
+                  <div style={{ ...mono, fontSize: "13px" }}>{item.physicalQty}</div>
+                  <div
+                    style={{
+                      ...mono,
+                      fontSize: "13px",
+                      fontWeight: 600,
+                      color: isZero ? "#b23b32" : isLow ? "#8a6d00" : "#16181c",
+                    }}
+                  >
                     {item.availableQty}
-                  </p>
-                  <p className="hidden md:block text-right text-sm text-muted-foreground">{item.stockMin || "—"}</p>
-                  <p className="hidden md:block text-right text-sm">{item.avgCost > 0 ? formatCurrency(item.avgCost) : "—"}</p>
+                  </div>
+                  <div style={{ ...mono, fontSize: "13px" }}>
+                    {item.avgCost > 0 ? formatCurrency(item.avgCost) : "—"}
+                  </div>
+                  <div><StatusBadge status={stockStatus} /></div>
+                </Link>
 
-                  <ArrowRight size={15} className="hidden md:block text-muted-foreground/30 group-hover:text-muted-foreground transition-colors" />
-                </div>
-              </Link>
+                {/* Mobile */}
+                <Link href={`/estoque/${item.id}`} className="md:hidden block px-4 py-3.5 hover:bg-[#f5f6f7] transition-colors">
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <span className="font-semibold text-[14px] text-[#16181c] truncate">{item.name}</span>
+                    <StatusBadge status={stockStatus} />
+                  </div>
+                  <p style={mono} className="text-[11px] text-[#9ba1a8]">
+                    {item.sku} · {item.category} · Disp: {item.availableQty}
+                  </p>
+                </Link>
+              </div>
             )
           })
         )}
       </div>
+
+      {items.length > 0 && (
+        <p style={mono} className="mt-3 text-[11px] text-[#9ba1a8]">
+          {items.length} produto{items.length !== 1 ? "s" : ""}
+        </p>
+      )}
     </div>
   )
 }

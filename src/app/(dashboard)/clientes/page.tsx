@@ -1,12 +1,9 @@
 import { Metadata } from "next"
 import Link from "next/link"
 import { getCustomers } from "@/actions/customers"
-import { formatDate, formatCNPJ } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Plus, Users, Search } from "lucide-react"
+import { StatusBadge } from "@/components/ui/status-badge"
 import { CustomerActions } from "@/components/customers/customer-actions"
+import { Users } from "lucide-react"
 
 export const metadata: Metadata = { title: "Clientes" }
 
@@ -14,127 +11,117 @@ interface Props {
   searchParams: Promise<{ q?: string }>
 }
 
+const mono: React.CSSProperties = { fontFamily: "'IBM Plex Mono', monospace" }
+
 export default async function ClientesPage({ searchParams }: Props) {
   const { q } = await searchParams
   const customers = await getCustomers(q)
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="p-6 bg-background min-h-full">
+      {/* ── Header ── */}
+      <div className="flex items-end justify-between mb-6 flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <Users size={22} /> Clientes
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            {customers.length} {customers.length === 1 ? "cliente cadastrado" : "clientes cadastrados"}
+          <p style={{ ...mono, fontSize: "11px", color: "#9ba1a8", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+            CADASTRO
           </p>
+          <h1 style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: "34px", color: "#16181c", lineHeight: 1, marginTop: "2px" }}>
+            Clientes
+          </h1>
         </div>
-        <Link href="/clientes/novo">
-          <Button>
-            <Plus size={16} />
-            Novo cliente
-          </Button>
+        <Link
+          href="/clientes/novo"
+          className="btn-clip text-white inline-flex items-center px-5 py-2.5 font-display font-bold text-[14px] uppercase tracking-[0.02em]"
+        >
+          Novo Cliente
         </Link>
       </div>
 
-      {/* Search */}
-      <Card>
-        <CardContent className="pt-4 pb-4">
-          <form className="flex gap-3">
-            <div className="relative flex-1">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <input
-                name="q"
-                defaultValue={q}
-                placeholder="Buscar por nome, CNPJ/CPF, e-mail..."
-                className="w-full pl-9 pr-4 py-2 text-sm border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-              />
-            </div>
-            <Button type="submit" variant="secondary">Buscar</Button>
-          </form>
-        </CardContent>
-      </Card>
-
-      {/* Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Lista de Clientes</CardTitle>
-          <CardDescription>Gerencie todos os clientes da FORJA PRO</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {customers.length === 0 ? (
-            <div className="text-center py-12">
-              <Users size={40} className="mx-auto text-muted-foreground/30 mb-4" />
-              <p className="text-muted-foreground font-medium">Nenhum cliente encontrado</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                {q ? "Tente outros termos de busca" : "Cadastre o primeiro cliente"}
-              </p>
-              {!q && (
-                <Link href="/clientes/novo" className="mt-4 inline-block">
-                  <Button size="sm">
-                    <Plus size={14} />
-                    Novo cliente
-                  </Button>
-                </Link>
-              )}
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b text-muted-foreground">
-                    <th className="text-left py-3 px-2 font-medium">Empresa / Nome</th>
-                    <th className="text-left py-3 px-2 font-medium">CNPJ / CPF</th>
-                    <th className="text-left py-3 px-2 font-medium hidden md:table-cell">E-mail</th>
-                    <th className="text-left py-3 px-2 font-medium hidden lg:table-cell">Cidade</th>
-                    <th className="text-left py-3 px-2 font-medium hidden lg:table-cell">Oportunidades</th>
-                    <th className="text-left py-3 px-2 font-medium">Status</th>
-                    <th className="text-left py-3 px-2 font-medium hidden md:table-cell">Cadastro</th>
-                    <th className="py-3 px-2" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {customers.map((c) => (
-                    <tr key={c.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
-                      <td className="py-3 px-2">
-                        <Link href={`/clientes/${c.id}`} className="hover:underline">
-                          <p className="font-medium">{c.companyName || c.tradeName || "—"}</p>
-                          {c.tradeName && c.companyName && (
-                            <p className="text-xs text-muted-foreground">{c.tradeName}</p>
-                          )}
-                        </Link>
-                      </td>
-                      <td className="py-3 px-2 text-muted-foreground font-mono text-xs">
-                        {formatCNPJ(c.document)}
-                      </td>
-                      <td className="py-3 px-2 text-muted-foreground hidden md:table-cell">
-                        {c.email || "—"}
-                      </td>
-                      <td className="py-3 px-2 text-muted-foreground hidden lg:table-cell">
-                        {c.city && c.state ? `${c.city}/${c.state}` : "—"}
-                      </td>
-                      <td className="py-3 px-2 text-center hidden lg:table-cell">
-                        <Badge variant="secondary">{c._count.opportunities}</Badge>
-                      </td>
-                      <td className="py-3 px-2">
-                        <Badge variant={c.isActive ? "default" : "secondary"}>
-                          {c.isActive ? "Ativo" : "Inativo"}
-                        </Badge>
-                      </td>
-                      <td className="py-3 px-2 text-muted-foreground hidden md:table-cell">
-                        {formatDate(c.createdAt)}
-                      </td>
-                      <td className="py-3 px-2">
-                        <CustomerActions customerId={c.id} />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+      {/* ── Table container ── */}
+      <div className="bg-white border border-[#dde0e3]">
+        {/* Search bar */}
+        <form className="flex gap-2.5 items-center px-4 py-3.5 border-b border-[#eceef0]">
+          <input
+            name="q"
+            defaultValue={q}
+            placeholder="Buscar cliente..."
+            className="flex-1 max-w-[280px] px-3 py-2 bg-[#f5f6f7] border border-[#dde0e3] text-[13px] text-[#21242a] placeholder:text-[#9ba1a8] outline-none focus:border-[#b5652f] transition-colors"
+          />
+          {q && (
+            <Link href="/clientes" className="text-[12px] font-semibold text-[#6b7178] hover:text-[#16181c]">
+              Limpar
+            </Link>
           )}
-        </CardContent>
-      </Card>
+        </form>
+
+        {/* Desktop header */}
+        <div
+          className="hidden sm:grid px-4 py-2.5 bg-[#f5f6f7]"
+          style={{ ...mono, fontSize: "11px", color: "#9ba1a8", gridTemplateColumns: "2fr 1fr 1fr 0.7fr auto" }}
+        >
+          <div>NOME</div>
+          <div>CIDADE/UF</div>
+          <div>TELEFONE</div>
+          <div>STATUS</div>
+          <div />
+        </div>
+
+        {/* Rows */}
+        {customers.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-14 gap-2">
+            <Users size={32} className="text-[#dde0e3]" />
+            <p className="text-[13px] text-[#9ba1a8]">
+              {q ? "Nenhum cliente encontrado para esta busca" : "Nenhum cliente cadastrado"}
+            </p>
+          </div>
+        ) : (
+          customers.map((c) => {
+            const name = c.companyName || c.tradeName || "—"
+            const location = c.city && c.state ? `${c.city}/${c.state}` : c.city || "—"
+            const status = c.isActive ? "ATIVO" : "INATIVO"
+
+            return (
+              <div key={c.id} className="border-t border-[#eceef0] group">
+                {/* Desktop row */}
+                <div
+                  className="hidden sm:grid items-center px-4 py-3.5 text-[14px] hover:bg-[#f5f6f7] transition-colors"
+                  style={{ gridTemplateColumns: "2fr 1fr 1fr 0.7fr auto" }}
+                >
+                  <Link href={`/clientes/${c.id}`} className="font-semibold text-[#16181c] hover:text-[#b5652f] truncate pr-3">
+                    {name}
+                    {c.tradeName && c.companyName && (
+                      <span className="block text-[12px] font-normal text-[#6b7178]">{c.tradeName}</span>
+                    )}
+                  </Link>
+                  <div className="text-[#6b7178] truncate pr-3">{location}</div>
+                  <div style={mono} className="text-[#6b7178] text-[13px]">{c.phone || "—"}</div>
+                  <div><StatusBadge status={status} /></div>
+                  <div className="flex justify-end"><CustomerActions customerId={c.id} /></div>
+                </div>
+
+                {/* Mobile row */}
+                <div className="sm:hidden px-4 py-3.5">
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <Link href={`/clientes/${c.id}`} className="font-semibold text-[14px] text-[#16181c] truncate">
+                      {name}
+                    </Link>
+                    <StatusBadge status={status} />
+                  </div>
+                  <p className="text-[12px] text-[#6b7178]">
+                    {location}{c.phone ? ` · ${c.phone}` : ""}
+                  </p>
+                </div>
+              </div>
+            )
+          })
+        )}
+      </div>
+
+      {customers.length > 0 && (
+        <p style={mono} className="mt-3 text-[11px] text-[#9ba1a8]">
+          {customers.length} {customers.length === 1 ? "cliente" : "clientes"}
+        </p>
+      )}
     </div>
   )
 }

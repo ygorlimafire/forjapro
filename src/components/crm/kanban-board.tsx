@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import {
   DndContext,
   DragOverlay,
@@ -15,6 +16,7 @@ import { toast } from "sonner"
 import { moveOpportunityStage } from "@/actions/crm"
 import { KanbanColumn } from "./kanban-column"
 import { KanbanCard } from "./kanban-card"
+import { OpportunityDrawer } from "./opportunity-drawer"
 import { formatCurrency } from "@/lib/utils"
 
 interface Opportunity {
@@ -41,9 +43,17 @@ interface KanbanBoardProps {
 }
 
 export function KanbanBoard({ stages: initialStages }: KanbanBoardProps) {
+  const router = useRouter()
   const [stages, setStages] = useState(initialStages)
   const [activeCard, setActiveCard] = useState<{ opp: Opportunity; stageId: string } | null>(null)
   const [dragging, setDragging] = useState(false)
+  const [selectedOppId, setSelectedOppId] = useState<string | null>(null)
+  const [drawerOpen, setDrawerOpen] = useState(false)
+
+  function handleCardClick(id: string) {
+    setSelectedOppId(id)
+    setDrawerOpen(true)
+  }
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -91,11 +101,11 @@ export function KanbanBoard({ stages: initialStages }: KanbanBoardProps) {
 
     const result = await moveOpportunityStage(oppId, toStageId)
     if (!result.success) {
-      // Reverter
       setStages(initialStages)
       toast.error(result.error)
     } else {
       toast.success("Oportunidade movida")
+      router.refresh()
     }
   }
 
@@ -128,7 +138,7 @@ export function KanbanBoard({ stages: initialStages }: KanbanBoardProps) {
       >
         <div className="flex gap-4 overflow-x-auto pb-4">
           {stages.map((stage) => (
-            <KanbanColumn key={stage.id} stage={stage} isDragging={dragging} />
+            <KanbanColumn key={stage.id} stage={stage} isDragging={dragging} onCardClick={handleCardClick} />
           ))}
         </div>
 
@@ -140,6 +150,12 @@ export function KanbanBoard({ stages: initialStages }: KanbanBoardProps) {
           )}
         </DragOverlay>
       </DndContext>
+
+      <OpportunityDrawer
+        opportunityId={selectedOppId}
+        open={drawerOpen}
+        onOpenChange={setDrawerOpen}
+      />
     </div>
   )
 }

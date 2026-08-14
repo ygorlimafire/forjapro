@@ -4,17 +4,33 @@ import { prisma } from "@/lib/prisma"
 import { redirect } from "next/navigation"
 import { can } from "@/lib/rbac"
 import Link from "next/link"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Settings, Users, Shield, Plus, Tag, Layers } from "lucide-react"
 import { formatDate } from "@/lib/utils"
+import { StatusBadge } from "@/components/ui/status-badge"
 import { UserActions } from "@/components/shared/user-actions"
 import { ExpenseCategoriesPanel } from "@/components/financial/expense-categories-panel"
 import { ProductCategoriesPanel } from "@/components/products/product-categories-panel"
 import { getAllCategories } from "@/actions/products"
+import { Users } from "lucide-react"
 
 export const metadata: Metadata = { title: "Configurações" }
+
+const mono: React.CSSProperties = { fontFamily: "'IBM Plex Mono', monospace" }
+
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <h2 style={{
+      fontFamily: "'Barlow Condensed', sans-serif",
+      fontWeight: 700,
+      fontSize: "16px",
+      color: "#16181c",
+      textTransform: "uppercase",
+      letterSpacing: "0.02em",
+      marginBottom: "16px",
+    }}>
+      {children}
+    </h2>
+  )
+}
 
 export default async function ConfiguracoesPage() {
   const session = await auth()
@@ -37,126 +53,110 @@ export default async function ConfiguracoesPage() {
   ])
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 bg-background min-h-full space-y-6">
+      {/* ── Header ── */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-          <Settings size={22} /> Configurações
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Gerencie usuários, perfis e configurações do sistema
+        <p style={{ ...mono, fontSize: "11px", color: "#9ba1a8", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+          SISTEMA
         </p>
+        <h1 style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: "34px", color: "#16181c", lineHeight: 1, marginTop: "2px" }}>
+          Configurações
+        </h1>
       </div>
 
-      {/* Usuários */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-base flex items-center gap-2">
-                <Users size={16} /> Usuários
-              </CardTitle>
-              <CardDescription>Gerencie os acessos da equipe</CardDescription>
+      {/* ── Usuários ── */}
+      <div className="bg-white border border-[#dde0e3] p-[22px]">
+        <div className="flex items-center justify-between mb-4">
+          <SectionTitle>Usuários</SectionTitle>
+          <Link
+            href="/configuracoes/usuarios/novo"
+            className="btn-clip text-white inline-flex items-center px-4 py-2 font-display font-bold text-[13px] uppercase tracking-[0.02em]"
+          >
+            Novo Usuário
+          </Link>
+        </div>
+
+        {/* Desktop header */}
+        <div
+          className="hidden sm:grid px-0 py-2 bg-[#f5f6f7] px-3"
+          style={{ ...mono, fontSize: "11px", color: "#9ba1a8", gridTemplateColumns: "1.5fr 1.5fr 1fr 0.7fr 0.8fr auto" }}
+        >
+          <div>NOME</div>
+          <div>E-MAIL</div>
+          <div>PERFIL</div>
+          <div>STATUS</div>
+          <div>DESDE</div>
+          <div />
+        </div>
+
+        <div className="border border-[#eceef0] mt-0">
+          {users.length === 0 ? (
+            <div className="flex items-center justify-center py-10 gap-2">
+              <Users size={28} className="text-[#dde0e3]" />
+              <p className="text-[13px] text-[#9ba1a8]">Nenhum usuário cadastrado</p>
             </div>
-            <Link href="/configuracoes/usuarios/novo">
-              <Button size="sm">
-                <Plus size={14} />
-                Novo usuário
-              </Button>
-            </Link>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b text-muted-foreground">
-                  <th className="text-left py-3 px-2 font-medium">Nome</th>
-                  <th className="text-left py-3 px-2 font-medium">E-mail</th>
-                  <th className="text-left py-3 px-2 font-medium">Perfil</th>
-                  <th className="text-left py-3 px-2 font-medium">Status</th>
-                  <th className="text-left py-3 px-2 font-medium hidden md:table-cell">Desde</th>
-                  <th className="py-3 px-2" />
-                </tr>
-              </thead>
-              <tbody>
-                {users.map((user) => (
-                  <tr key={user.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
-                    <td className="py-3 px-2 font-medium">{user.name}</td>
-                    <td className="py-3 px-2 text-muted-foreground">{user.email}</td>
-                    <td className="py-3 px-2">
-                      <Badge variant="outline">{user.role.label}</Badge>
-                    </td>
-                    <td className="py-3 px-2">
-                      <Badge variant={user.isActive ? "default" : "secondary"}>
-                        {user.isActive ? "Ativo" : "Inativo"}
-                      </Badge>
-                    </td>
-                    <td className="py-3 px-2 text-muted-foreground hidden md:table-cell">
-                      {formatDate(user.createdAt)}
-                    </td>
-                    <td className="py-3 px-2">
-                      <UserActions userId={user.id} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Perfis */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <Shield size={16} /> Perfis de Acesso
-          </CardTitle>
-          <CardDescription>Papéis e permissões do sistema</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {roles.map((role) => (
-              <div key={role.id} className="border rounded-lg p-4 space-y-2">
-                <div className="flex items-center justify-between">
-                  <p className="font-semibold text-sm">{role.label}</p>
-                  <Badge variant="secondary">{role._count.users} usuário(s)</Badge>
+          ) : (
+            users.map((user) => (
+              <div key={user.id} className="border-b border-[#eceef0] last:border-0">
+                {/* Desktop */}
+                <div
+                  className="hidden sm:grid items-center px-3 py-3 text-[14px] hover:bg-[#f5f6f7] transition-colors"
+                  style={{ gridTemplateColumns: "1.5fr 1.5fr 1fr 0.7fr 0.8fr auto" }}
+                >
+                  <div className="font-semibold text-[#16181c] truncate pr-3">{user.name}</div>
+                  <div style={mono} className="text-[#6b7178] text-[13px] truncate pr-3">{user.email}</div>
+                  <div className="text-[#6b7178] text-[13px]">{user.role.label}</div>
+                  <div><StatusBadge status={user.isActive ? "ATIVO" : "INATIVO"} /></div>
+                  <div style={mono} className="text-[#6b7178] text-[12px]">{formatDate(user.createdAt)}</div>
+                  <div className="flex justify-end"><UserActions userId={user.id} /></div>
                 </div>
-                {role.description && (
-                  <p className="text-xs text-muted-foreground">{role.description}</p>
-                )}
+                {/* Mobile */}
+                <div className="sm:hidden px-3 py-3">
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <span className="font-semibold text-[14px] text-[#16181c]">{user.name}</span>
+                    <StatusBadge status={user.isActive ? "ATIVO" : "INATIVO"} />
+                  </div>
+                  <p style={mono} className="text-[12px] text-[#6b7178]">
+                    {user.email} · {user.role.label}
+                  </p>
+                </div>
               </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+            ))
+          )}
+        </div>
+      </div>
 
-      {/* Categorias de Despesa */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <Tag size={16} /> Categorias de Despesa
-          </CardTitle>
-          <CardDescription>Organize as contas a pagar por categorias com cores</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ExpenseCategoriesPanel categories={expenseCategories} />
-        </CardContent>
-      </Card>
+      {/* ── Perfis de Acesso ── */}
+      <div className="bg-white border border-[#dde0e3] p-[22px]">
+        <SectionTitle>Perfis de Acesso</SectionTitle>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {roles.map((role) => (
+            <div key={role.id} className="border border-[#eceef0] p-4">
+              <div className="flex items-center justify-between mb-1">
+                <p className="font-semibold text-[14px] text-[#16181c]">{role.label}</p>
+                <span style={{ ...mono, fontSize: "11px", color: "#9ba1a8" }}>
+                  {role._count.users} usuário{role._count.users !== 1 ? "s" : ""}
+                </span>
+              </div>
+              {role.description && (
+                <p className="text-[12px] text-[#6b7178] mt-1">{role.description}</p>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
 
-      {/* Categorias de Produtos */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <Layers size={16} /> Categorias de Produtos
-          </CardTitle>
-          <CardDescription>
-            Organize o catálogo por categoria — defina nome, descrição e ordem de exibição
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ProductCategoriesPanel categories={productCategories} />
-        </CardContent>
-      </Card>
+      {/* ── Categorias de Despesa ── */}
+      <div className="bg-white border border-[#dde0e3] p-[22px]">
+        <SectionTitle>Categorias de Despesa</SectionTitle>
+        <ExpenseCategoriesPanel categories={expenseCategories} />
+      </div>
+
+      {/* ── Categorias de Produtos ── */}
+      <div className="bg-white border border-[#dde0e3] p-[22px]">
+        <SectionTitle>Categorias de Produtos</SectionTitle>
+        <ProductCategoriesPanel categories={productCategories} />
+      </div>
     </div>
   )
 }
