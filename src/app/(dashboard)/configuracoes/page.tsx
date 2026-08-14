@@ -3,14 +3,10 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { redirect } from "next/navigation"
 import { can } from "@/lib/rbac"
-import Link from "next/link"
-import { formatDate } from "@/lib/utils"
-import { StatusBadge } from "@/components/ui/status-badge"
-import { UserActions } from "@/components/shared/user-actions"
+import { UsersSection } from "@/components/configuracoes/users-section"
 import { ExpenseCategoriesPanel } from "@/components/financial/expense-categories-panel"
 import { ProductCategoriesPanel } from "@/components/products/product-categories-panel"
 import { getAllCategories } from "@/actions/products"
-import { Users } from "lucide-react"
 
 export const metadata: Metadata = { title: "Configurações" }
 
@@ -66,64 +62,7 @@ export default async function ConfiguracoesPage() {
 
       {/* ── Usuários ── */}
       <div className="bg-white border border-[#dde0e3] p-[22px]">
-        <div className="flex items-center justify-between mb-4">
-          <SectionTitle>Usuários</SectionTitle>
-          <Link
-            href="/configuracoes/usuarios/novo"
-            className="btn-clip text-white inline-flex items-center px-4 py-2 font-display font-bold text-[13px] uppercase tracking-[0.02em]"
-          >
-            Novo Usuário
-          </Link>
-        </div>
-
-        {/* Desktop header */}
-        <div
-          className="hidden sm:grid px-0 py-2 bg-[#f5f6f7] px-3"
-          style={{ ...mono, fontSize: "11px", color: "#9ba1a8", gridTemplateColumns: "1.5fr 1.5fr 1fr 0.7fr 0.8fr auto" }}
-        >
-          <div>NOME</div>
-          <div>E-MAIL</div>
-          <div>PERFIL</div>
-          <div>STATUS</div>
-          <div>DESDE</div>
-          <div />
-        </div>
-
-        <div className="border border-[#eceef0] mt-0">
-          {users.length === 0 ? (
-            <div className="flex items-center justify-center py-10 gap-2">
-              <Users size={28} className="text-[#dde0e3]" />
-              <p className="text-[13px] text-[#9ba1a8]">Nenhum usuário cadastrado</p>
-            </div>
-          ) : (
-            users.map((user) => (
-              <div key={user.id} className="border-b border-[#eceef0] last:border-0">
-                {/* Desktop */}
-                <div
-                  className="hidden sm:grid items-center px-3 py-3 text-[14px] hover:bg-[#f5f6f7] transition-colors"
-                  style={{ gridTemplateColumns: "1.5fr 1.5fr 1fr 0.7fr 0.8fr auto" }}
-                >
-                  <div className="font-semibold text-[#16181c] truncate pr-3">{user.name}</div>
-                  <div style={mono} className="text-[#6b7178] text-[13px] truncate pr-3">{user.email}</div>
-                  <div className="text-[#6b7178] text-[13px]">{user.role.label}</div>
-                  <div><StatusBadge status={user.isActive ? "ATIVO" : "INATIVO"} /></div>
-                  <div style={mono} className="text-[#6b7178] text-[12px]">{formatDate(user.createdAt)}</div>
-                  <div className="flex justify-end"><UserActions userId={user.id} /></div>
-                </div>
-                {/* Mobile */}
-                <div className="sm:hidden px-3 py-3">
-                  <div className="flex items-center justify-between gap-2 mb-1">
-                    <span className="font-semibold text-[14px] text-[#16181c]">{user.name}</span>
-                    <StatusBadge status={user.isActive ? "ATIVO" : "INATIVO"} />
-                  </div>
-                  <p style={mono} className="text-[12px] text-[#6b7178]">
-                    {user.email} · {user.role.label}
-                  </p>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
+        <UsersSection users={users} roles={roles} />
       </div>
 
       {/* ── Perfis de Acesso ── */}
