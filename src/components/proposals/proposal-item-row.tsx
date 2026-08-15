@@ -260,7 +260,8 @@ export function ProposalItemRow({ index, onRemove, minMargin }: ProposalItemRowP
 
       {/* Hidden fields */}
       <input type="hidden" {...register(`items.${index}.isCustomItem`, { setValueAs: (v) => v === "true" || v === true })} />
-      <input type="hidden" {...register(`items.${index}.netPrice`, { valueAsNumber: true })} />
+      {/* netPrice hidden only for regular items — custom items have a visible input; a duplicate register would reset the value on re-render */}
+      {!isCustomItem && <input type="hidden" {...register(`items.${index}.netPrice`, { valueAsNumber: true })} />}
       <input type="hidden" {...register(`items.${index}.subtotal`, { valueAsNumber: true })} />
       <input type="hidden" {...register(`items.${index}.estimatedMargin`, { valueAsNumber: true })} />
       <input type="hidden" {...register(`items.${index}.estimatedMarginPct`, { valueAsNumber: true })} />
