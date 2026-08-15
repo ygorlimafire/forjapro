@@ -72,6 +72,8 @@ export async function GET(
       productImage: item.productImage,
       productDescription: item.productDescription,
       technicalSpecs: item.technicalSpecs as Record<string, string> | null,
+      isCustomItem: item.isCustomItem,
+      customSpecs: item.customSpecs,
       listPrice: Number(item.listPrice),
       ipiPct: Number(item.ipiPct),
       discountPct: Number(item.discountPct),

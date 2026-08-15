@@ -226,22 +226,23 @@ model ProductCategory {
 }
 
 model Product {
-  id             String    @id @default(cuid())
-  sku            String    @unique
-  name           String
-  categoryId     String
-  description    String?   @db.Text
-  technicalSpecs Json?
-  mainImage      String?
-  listPrice      Decimal   @db.Decimal(10, 2)
-  costPrice      Decimal   @db.Decimal(10, 2)
-  desiredMargin  Decimal?  @db.Decimal(5, 2)
-  warranty       String?
-  stockMin       Int       @default(0)
-  isActive       Boolean   @default(true)
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-  deletedAt      DateTime?
+  id              String    @id @default(cuid())
+  sku             String    @unique
+  name            String
+  categoryId      String
+  description     String?   @db.Text
+  technicalSpecs  Json?
+  mainImage       String?
+  listPrice       Decimal   @db.Decimal(10, 2)
+  costPrice       Decimal   @db.Decimal(10, 2)
+  desiredMargin   Decimal?  @db.Decimal(5, 2)
+  warranty        String?
+  stockMin        Int       @default(0)
+  isCustomizable  Boolean   @default(false)
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
 
   category      ProductCategory @relation(fields: [categoryId], references: [id])
   images        ProductImage[]
@@ -626,7 +627,10 @@ model SalesProposal {
 model SalesProposalItem {
   id                 String   @id @default(cuid())
   proposalId         String
-  productId          String
+  productId          String?
+  isCustomItem       Boolean  @default(false)
+  customCost         Decimal? @db.Decimal(10, 2)
+  customSpecs        String?  @db.Text
   position           Int      @default(0)
   productName        String
   productSku         String
@@ -646,7 +650,7 @@ model SalesProposalItem {
   updatedAt          DateTime @updatedAt
 
   proposal SalesProposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
-  product  Product       @relation(fields: [productId], references: [id])
+  product  Product?      @relation(fields: [productId], references: [id])
 }
 
 // ─── ORDERS ───────────────────────────────────────────────────────────────────
@@ -688,17 +692,18 @@ model SalesOrder {
 }
 
 model SalesOrderItem {
-  id        String   @id @default(cuid())
-  orderId   String
-  productId String
-  quantity  Int
-  unitPrice Decimal  @db.Decimal(10, 2)
-  subtotal  Decimal  @db.Decimal(10, 2)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(cuid())
+  orderId     String
+  productId   String?
+  productName String?
+  quantity    Int
+  unitPrice   Decimal  @db.Decimal(10, 2)
+  subtotal    Decimal  @db.Decimal(10, 2)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   order   SalesOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product Product    @relation(fields: [productId], references: [id])
+  product Product?   @relation(fields: [productId], references: [id])
 }
 
 // ─── FINANCEIRO ───────────────────────────────────────────────────────────────

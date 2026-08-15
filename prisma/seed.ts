@@ -515,6 +515,41 @@ async function main() {
   }
   console.log(`  ✓ ${productsData.length} produtos de exemplo`)
 
+  // ── Produtos sob medida (modelos customizáveis) ───────────────────────────
+  const customizableProducts = [
+    {
+      sku: "FP-EXS-SM",
+      name: "Sistema de Exaustão Sob Medida",
+      categoryId: categoryMap["Exaustão/Ventilação"],
+      description: "Projeto e fornecimento de sistema de exaustão dimensionado conforme especificações do cliente. Inclui coifa, dutos, motor e instalação. Medidas, capacidade e acabamento definidos por projeto.",
+      listPrice: 0,
+      costPrice: 0,
+      stockMin: 0,
+      isCustomizable: true,
+      isActive: true,
+    },
+    {
+      sku: "FP-VNT-SM",
+      name: "Projeto de Ventilação Sob Medida",
+      categoryId: categoryMap["Exaustão/Ventilação"],
+      description: "Dimensionamento e fornecimento de sistema de ventilação forçada sob medida. Adequado para cozinhas industriais, padarias e ambientes com necessidades específicas de renovação de ar.",
+      listPrice: 0,
+      costPrice: 0,
+      stockMin: 0,
+      isCustomizable: true,
+      isActive: true,
+    },
+  ]
+
+  for (const prod of customizableProducts) {
+    await prisma.product.upsert({
+      where: { sku: prod.sku },
+      update: { isCustomizable: true },
+      create: prod,
+    })
+  }
+  console.log(`  ✓ ${customizableProducts.length} produtos sob medida (modelos customizáveis)`)
+
   // ── Pipeline e etapas do funil ────────────────────────────────────────────
   const pipeline = await prisma.pipeline.upsert({
     where: { id: "pipeline-principal" },

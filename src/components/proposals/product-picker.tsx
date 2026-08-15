@@ -23,6 +23,7 @@ export type ProductResult = {
   technicalSpecs: any
   warranty: string | null
   desiredMargin: any
+  isCustomizable: boolean
   category: { name: string }
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */
@@ -203,15 +204,18 @@ export function ProductPicker({ open, onOpenChange, onSelect, selectedIds = [] }
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-0.5">
+                  <div className="flex items-center gap-2 mb-0.5 flex-wrap">
                     <p className="font-medium text-sm truncate">{product.name}</p>
+                    {product.isCustomizable && (
+                      <Badge className="text-[10px] px-1.5 py-0 h-4 bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-100 shrink-0">SOB MEDIDA</Badge>
+                    )}
                     {isSelected && (
                       <Badge variant="outline" className="text-xs shrink-0">Já adicionado</Badge>
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground">{product.sku} · {product.category.name}</p>
                   <p className="text-xs font-medium text-foreground mt-0.5">
-                    {formatCurrency(Number(product.listPrice))}
+                    {product.isCustomizable ? "Preço por projeto" : formatCurrency(Number(product.listPrice))}
                   </p>
                 </div>
                 <div className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">

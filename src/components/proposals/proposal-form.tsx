@@ -15,7 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ProductPicker } from "./product-picker"
 import { ProposalItemRow } from "./proposal-item-row"
 import { MarginAlert } from "./margin-alert"
-import { Save, Loader2, Plus, UserPlus, X } from "lucide-react"
+import { Save, Loader2, Plus, UserPlus, X, Pencil } from "lucide-react"
 import { formatCurrency } from "@/lib/utils"
 
 interface CustomerOption {
@@ -62,7 +62,10 @@ export function ProposalForm({
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const defaultItems = proposal?.items?.map((item: any) => ({
-    productId: item.productId,
+    productId: item.productId || null,
+    isCustomItem: item.isCustomItem ?? false,
+    customCost: item.customCost != null ? Number(item.customCost) : null,
+    customSpecs: item.customSpecs || "",
     position: item.position,
     productName: item.productName,
     productSku: item.productSku,
@@ -118,7 +121,10 @@ export function ProposalForm({
   const totalProducts = items.reduce((sum, item) => sum + (item.subtotal || 0), 0)
   const totalAmount = totalProducts + freight
   const overallMarginPct = totalProducts > 0
-    ? (items.reduce((sum, item) => sum + ((item.subtotal || 0) - (item.costPrice || 0) * (item.quantity || 1)), 0) / totalProducts) * 100
+    ? (items.reduce((sum, item) => {
+        const cost = (item.customCost != null ? item.customCost : (item.costPrice || 0))
+        return sum + ((item.subtotal || 0) - cost * (item.quantity || 1))
+      }, 0) / totalProducts) * 100
     : 0
   const hasBelowMinMargin = items.some(
     (item) => (item.estimatedMarginPct || 0) < minMarginPct
@@ -126,25 +132,55 @@ export function ProposalForm({
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   function handleProductSelect(product: any) {
+    const isCustomizable = !!product.isCustomizable
+    const listPrice = isCustomizable ? 0 : Number(product.listPrice)
+    const costPrice = Number(product.costPrice)
     append({
       productId: product.id,
+      isCustomItem: isCustomizable,
+      customCost: isCustomizable ? null : null,
+      customSpecs: "",
       position: fields.length,
       productName: product.name,
       productSku: product.sku,
       productImage: product.mainImage || "",
       productDescription: product.description || "",
-      technicalSpecs: product.technicalSpecs || {},
-      listPrice: Number(product.listPrice),
-      costPrice: Number(product.costPrice),
+      technicalSpecs: isCustomizable ? {} : (product.technicalSpecs || {}),
+      listPrice,
+      costPrice,
       ipiPct: 0,
       discountPct: 0,
-      netPrice: Number(product.listPrice),
+      netPrice: listPrice,
       quantity: 1,
-      subtotal: Number(product.listPrice),
-      estimatedMargin: Number(product.listPrice) - Number(product.costPrice),
-      estimatedMarginPct: Number(product.listPrice) > 0
-        ? ((Number(product.listPrice) - Number(product.costPrice)) / Number(product.listPrice)) * 100
+      subtotal: listPrice,
+      estimatedMargin: listPrice - costPrice,
+      estimatedMarginPct: listPrice > 0
+        ? ((listPrice - costPrice) / listPrice) * 100
         : 0,
+    })
+  }
+
+  function handleAddAvulso() {
+    append({
+      productId: null,
+      isCustomItem: true,
+      customCost: null,
+      customSpecs: "",
+      position: fields.length,
+      productName: "",
+      productSku: "",
+      productImage: "",
+      productDescription: "",
+      technicalSpecs: {},
+      listPrice: 0,
+      costPrice: 0,
+      ipiPct: 0,
+      discountPct: 0,
+      netPrice: 0,
+      quantity: 1,
+      subtotal: 0,
+      estimatedMargin: 0,
+      estimatedMarginPct: 0,
     })
   }
 
@@ -311,15 +347,26 @@ export function ProposalForm({
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-base">Produtos</CardTitle>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={() => setPickerOpen(true)}
-            >
-              <Plus size={14} />
-              Adicionar produto
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={handleAddAvulso}
+              >
+                <Pencil size={14} />
+                Item avulso
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => setPickerOpen(true)}
+              >
+                <Plus size={14} />
+                Adicionar produto
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="space-y-3">
             {fields.length === 0 ? (
@@ -514,7 +561,7 @@ export function ProposalForm({
           open={pickerOpen}
           onOpenChange={setPickerOpen}
           onSelect={handleProductSelect}
-          selectedIds={fields.map((f) => (f as { productId: string }).productId)}
+          selectedIds={fields.map((f) => (f as { productId?: string | null }).productId).filter((id): id is string => !!id)}
         />
       </form>
     </FormProvider>

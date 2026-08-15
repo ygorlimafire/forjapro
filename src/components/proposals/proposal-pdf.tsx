@@ -45,6 +45,8 @@ export type ProposalPDFData = {
     productImage: string | null
     productDescription: string | null
     technicalSpecs: Record<string, string> | null
+    isCustomItem: boolean
+    customSpecs: string | null
     listPrice: number
     ipiPct: number
     discountPct: number
@@ -114,6 +116,10 @@ function buildAddress(customer: ProposalPDFData["customer"]) {
 }
 
 function getSpecBullets(item: ProposalPDFData["items"][0]): string[] {
+  // Custom items use customSpecs as the primary spec source
+  if (item.customSpecs) {
+    return item.customSpecs.split(/\n/).map((s) => s.trim()).filter(Boolean)
+  }
   if (item.technicalSpecs && Object.keys(item.technicalSpecs).length > 0) {
     return Object.values(item.technicalSpecs)
   }
@@ -588,14 +594,19 @@ function ItemRow({
           <Text style={s.itemCode}>{item.productSku}</Text>
         </View>
         <View style={s.itemProductCell}>
-          {item.productImage ? (
+          {!item.isCustomItem && item.productImage ? (
             <Image src={item.productImage} style={s.itemImage} />
           ) : (
             <View style={[s.itemImage, { justifyContent: "center", alignItems: "center" }]}>
-              <Text style={{ fontSize: 6, color: "#aaaaaa" }}>SEM\nFOTO</Text>
+              <Text style={{ fontSize: 6, color: "#aaaaaa" }}>{item.isCustomItem ? "SOB\nMEDIDA" : "SEM\nFOTO"}</Text>
             </View>
           )}
-          <Text style={s.itemProductName}>{item.productName}</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={s.itemProductName}>{item.productName}</Text>
+            {item.isCustomItem && (
+              <Text style={{ fontSize: 6, color: "#b45309", marginTop: 2 }}>PROJETO SOB MEDIDA</Text>
+            )}
+          </View>
         </View>
         <View style={s.itemSpecsCell}>
           {bullets.length > 0 && (

@@ -1,23 +1,29 @@
 import { z } from "zod"
 
 export const proposalItemSchema = z.object({
-  productId: z.string().min(1, "Produto obrigatório"),
+  productId: z.string().optional().nullable(),
+  isCustomItem: z.boolean().default(false),
+  customCost: z.number().min(0).optional().nullable(),
+  customSpecs: z.string().optional().nullable(),
   position: z.number().int(),
-  productName: z.string(),
+  productName: z.string().min(1, "Nome do item obrigatório"),
   productSku: z.string(),
-  productImage: z.string().optional(),
-  productDescription: z.string().optional(),
-  technicalSpecs: z.record(z.string(), z.string()).optional(),
-  listPrice: z.number().min(0.01, "Preço de tabela inválido"),
+  productImage: z.string().optional().nullable(),
+  productDescription: z.string().optional().nullable(),
+  technicalSpecs: z.record(z.string(), z.string()).optional().nullable(),
+  listPrice: z.number().min(0),
   costPrice: z.number().min(0),
   ipiPct: z.number().min(0).max(100),
   discountPct: z.number().min(0).max(100),
-  netPrice: z.number().min(0),
+  netPrice: z.number().min(0.01, "Preço de venda inválido"),
   quantity: z.number().int().min(1, "Quantidade mínima é 1"),
   subtotal: z.number().min(0),
-  estimatedMargin: z.number().optional(),
-  estimatedMarginPct: z.number().optional(),
-})
+  estimatedMargin: z.number().optional().nullable(),
+  estimatedMarginPct: z.number().optional().nullable(),
+}).refine(
+  (data) => data.isCustomItem || (!!data.productId && data.productId.length > 0),
+  { message: "Produto obrigatório para itens de catálogo", path: ["productId"] }
+)
 
 export const proposalSchema = z.object({
   customerId: z.string().min(1, "Cliente obrigatório"),

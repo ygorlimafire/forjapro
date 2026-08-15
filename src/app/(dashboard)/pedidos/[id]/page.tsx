@@ -193,7 +193,7 @@ export default async function PedidoDetailPage({ params }: PageProps) {
           {order.items.map((item) => (
             <div key={item.id} className="flex items-center gap-3 pb-3 border-b last:border-0 last:pb-0">
               <div className="relative w-12 h-12 rounded border bg-muted shrink-0 overflow-hidden">
-                {item.product.mainImage ? (
+                {item.product?.mainImage ? (
                   <Image src={item.product.mainImage} alt="" fill className="object-cover" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
@@ -202,8 +202,8 @@ export default async function PedidoDetailPage({ params }: PageProps) {
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-medium text-sm truncate">{item.product.name}</p>
-                <p className="text-xs text-muted-foreground">{item.product.sku} · {item.quantity}× {formatCurrency(Number(item.unitPrice))}</p>
+                <p className="font-medium text-sm truncate">{item.productName ?? item.product?.name ?? "—"}</p>
+                <p className="text-xs text-muted-foreground">{item.product?.sku ?? "—"} · {item.quantity}× {formatCurrency(Number(item.unitPrice))}</p>
               </div>
               <div className="text-right shrink-0">
                 <p className="font-semibold text-sm">{formatCurrency(Number(item.subtotal))}</p>

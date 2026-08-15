@@ -32,7 +32,7 @@ export async function getSuggestedPurchases() {
 
   // 1. Products with availableQty below stockMin
   const products = await prisma.product.findMany({
-    where: { deletedAt: null, isActive: true, stockMin: { gt: 0 } },
+    where: { deletedAt: null, isActive: true, isCustomizable: false, stockMin: { gt: 0 } },
     include: {
       category: { select: { name: true } },
       productStocks: { where: { warehouseId: warehouse.id }, take: 1 },
@@ -65,6 +65,7 @@ export async function getSuggestedPurchases() {
       reservedByProduct.set(r.productId, (reservedByProduct.get(r.productId) ?? 0) + r.quantity)
     }
     for (const item of order.items) {
+      if (!item.productId) continue  // skip custom/avulso items
       const reserved = reservedByProduct.get(item.productId) ?? 0
       const short = item.quantity - reserved
       if (short <= 0) continue

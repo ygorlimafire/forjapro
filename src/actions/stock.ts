@@ -277,14 +277,16 @@ export async function refreshOrderReservations(
   }
 
   let fullyReserved = 0
+  const stockableItems = order.items.filter((i) => i.productId)
 
-  for (const item of order.items) {
-    const alreadyReserved = reservedByProduct.get(item.productId) ?? 0
+  for (const item of stockableItems) {
+    const productId = item.productId!
+    const alreadyReserved = reservedByProduct.get(productId) ?? 0
     const stillNeeded = item.quantity - alreadyReserved
     if (stillNeeded <= 0) { fullyReserved++; continue }
 
     const stock = await tx.productStock.findUnique({
-      where: { productId_warehouseId: { productId: item.productId, warehouseId: warehouse.id } },
+      where: { productId_warehouseId: { productId, warehouseId: warehouse.id } },
     })
     const available = stock?.availableQty ?? 0
     const toReserve = Math.min(available, stillNeeded)
@@ -292,14 +294,14 @@ export async function refreshOrderReservations(
     if (toReserve > 0) {
       await tx.stockReservation.create({
         data: {
-          productId: item.productId,
+          productId,
           warehouseId: warehouse.id,
           orderId,
           quantity: toReserve,
           status: "ATIVA",
         },
       })
-      await applyProductStockDelta(tx, item.productId, warehouse.id, {
+      await applyProductStockDelta(tx, productId, warehouse.id, {
         physicalDelta: 0,
         reservedDelta: toReserve,
       })
@@ -308,8 +310,10 @@ export async function refreshOrderReservations(
     if (alreadyReserved + toReserve >= item.quantity) fullyReserved++
   }
 
-  if (fullyReserved === order.items.length) return "OK"
-  if (fullyReserved === 0 && order.reservations.length === 0) return "INSUFICIENTE"
+  // Custom/avulso items (no productId) count as "reserved" for stockStatus purposes
+  const customItemCount = order.items.length - stockableItems.length
+  if (fullyReserved + customItemCount === order.items.length) return "OK"
+  if (fullyReserved === 0 && order.reservations.length === 0 && stockableItems.length > 0) return "INSUFICIENTE"
   return "PARCIAL"
 }
 
@@ -342,6 +346,7 @@ export async function fulfillStockDebtInTx(
   }
 
   for (const item of order.items) {
+    if (!item.productId) continue
     const alreadyFulfilled = alreadySaidaByProduct.get(item.productId) ?? 0
     const debt = item.quantity - alreadyFulfilled
     if (debt <= 0) continue
@@ -459,7 +464,7 @@ export async function getStockList() {
   const warehouse = await getOrCreateDefaultWarehouse()
 
   const products = await prisma.product.findMany({
-    where: { deletedAt: null, isActive: true },
+    where: { deletedAt: null, isActive: true, isCustomizable: false },
     include: {
       category: { select: { name: true } },
       productStocks: {
@@ -521,12 +526,12 @@ export async function getStockSummary() {
   const warehouse = await getOrCreateDefaultWarehouse()
   const stocks = await prisma.productStock.findMany({
     where: { warehouseId: warehouse.id },
-    include: { product: { select: { stockMin: true } } },
+    include: { product: { select: { stockMin: true, isCustomizable: true } } },
   })
 
   const totalValue = stocks.reduce((s, ps) => s + ps.physicalQty * Number(ps.avgCost), 0)
   const lowStock = stocks.filter(
-    (ps) => ps.availableQty <= ps.product.stockMin && ps.product.stockMin > 0
+    (ps) => !ps.product.isCustomizable && ps.availableQty <= ps.product.stockMin && ps.product.stockMin > 0
   ).length
   const zeroStock = stocks.filter((ps) => ps.availableQty === 0).length
 

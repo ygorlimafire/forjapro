@@ -18,6 +18,10 @@ function formatProposalNumber(seq: number, date: Date): string {
   return `${seq}.${dd}${mm}.${yy}`
 }
 
+function effectiveCost(item: { costPrice: number; customCost?: number | null }): number {
+  return item.customCost != null ? item.customCost : item.costPrice
+}
+
 export async function createProposal(
   formData: unknown
 ): Promise<ActionResult<{ id: string; number: string }>> {
@@ -51,13 +55,12 @@ export async function createProposal(
       const freight = rest.freight || 0
       const totalAmount = totalProducts + freight
 
-      const weightedMargin = items.reduce(
-        (sum, item) => sum + (item.estimatedMargin ?? 0) * item.quantity,
+      const estimatedMargin = items.reduce(
+        (sum, item) => sum + (item.netPrice - effectiveCost(item)) * item.quantity,
         0
       )
-      const estimatedMargin = weightedMargin
       const estimatedMarginPct = totalProducts > 0
-        ? (items.reduce((sum, item) => sum + (item.subtotal - item.costPrice * item.quantity), 0) / totalProducts) * 100
+        ? (estimatedMargin / totalProducts) * 100
         : 0
 
       const proposal = await tx.salesProposal.create({
@@ -84,7 +87,10 @@ export async function createProposal(
           items: {
             createMany: {
               data: items.map((item, idx) => ({
-                productId: item.productId,
+                productId: item.productId || null,
+                isCustomItem: item.isCustomItem ?? false,
+                customCost: item.customCost ?? null,
+                customSpecs: item.customSpecs || null,
                 position: idx,
                 productName: item.productName,
                 productSku: item.productSku,
@@ -152,7 +158,7 @@ export async function updateProposal(
     const freight = rest.freight || 0
     const totalAmount = totalProducts + freight
     const estimatedMarginPct = totalProducts > 0
-      ? (items.reduce((sum, item) => sum + (item.subtotal - item.costPrice * item.quantity), 0) / totalProducts) * 100
+      ? (items.reduce((sum, item) => sum + (item.netPrice - effectiveCost(item)) * item.quantity, 0) / totalProducts) * 100
       : 0
 
     await prisma.$transaction(async (tx) => {
@@ -178,7 +184,10 @@ export async function updateProposal(
           items: {
             createMany: {
               data: items.map((item, idx) => ({
-                productId: item.productId,
+                productId: item.productId || null,
+                isCustomItem: item.isCustomItem ?? false,
+                customCost: item.customCost ?? null,
+                customSpecs: item.customSpecs || null,
                 position: idx,
                 productName: item.productName,
                 productSku: item.productSku,
@@ -246,7 +255,6 @@ export async function approveProposal(id: string): Promise<ActionResult<void>> {
       }
     }
 
-    // Find the "won" pipeline stage
     const wonStage = await prisma.pipelineStage.findFirst({ where: { isWon: true } })
 
     await prisma.$transaction(async (tx) => {
@@ -271,7 +279,8 @@ export async function approveProposal(id: string): Promise<ActionResult<void>> {
           items: {
             createMany: {
               data: proposal.items.map((item) => ({
-                productId: item.productId,
+                productId: item.productId ?? null,
+                productName: item.productName,
                 quantity: item.quantity,
                 unitPrice: item.netPrice,
                 subtotal: item.subtotal,
@@ -299,17 +308,20 @@ export async function approveProposal(id: string): Promise<ActionResult<void>> {
       })
       await tx.accountReceivable.createMany({ data: receivables })
 
-      // Reservar estoque — seta stockStatus no pedido
-      const stockResult = await createOrderReservations(
-        tx,
-        order.id,
-        proposal.items.map((i) => ({ productId: i.productId, quantity: i.quantity }))
-      )
-      if (stockResult !== "OK") {
-        await tx.salesOrder.update({
-          where: { id: order.id },
-          data: { stockStatus: stockResult === "PARCIAL" ? "PARCIAL" : "INSUFICIENTE" },
-        })
+      // Only reserve stock for regular (non-custom) items with a product
+      const stockableItems = proposal.items.filter((i) => !i.isCustomItem && i.productId)
+      if (stockableItems.length > 0) {
+        const stockResult = await createOrderReservations(
+          tx,
+          order.id,
+          stockableItems.map((i) => ({ productId: i.productId!, quantity: i.quantity }))
+        )
+        if (stockResult !== "OK") {
+          await tx.salesOrder.update({
+            where: { id: order.id },
+            data: { stockStatus: stockResult === "PARCIAL" ? "PARCIAL" : "INSUFICIENTE" },
+          })
+        }
       }
 
       await tx.activity.create({
@@ -467,7 +479,10 @@ export async function duplicateProposal(id: string): Promise<ActionResult<{ id: 
           items: {
             createMany: {
               data: source.items.map((item) => ({
-                productId: item.productId,
+                productId: item.productId ?? null,
+                isCustomItem: item.isCustomItem,
+                customCost: item.customCost ?? null,
+                customSpecs: item.customSpecs ?? null,
                 position: item.position,
                 productName: item.productName,
                 productSku: item.productSku,

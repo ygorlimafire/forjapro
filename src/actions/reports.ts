@@ -281,18 +281,20 @@ export async function getMarginReport(from: Date, to: Date) {
 
   const productMap: Record<
     string,
-    { name: string; sku: string; qty: number; revenue: number; cost: number; margin: number; discountValue: number }
+    { name: string; sku: string; qty: number; revenue: number; cost: number; margin: number; discountValue: number; isCustom: boolean }
   > = {}
   for (const item of items) {
-    const key = item.productId
+    const key = item.productId ?? `avulso:${item.id}`
     if (!productMap[key]) {
-      productMap[key] = { name: item.productName, sku: item.productSku, qty: 0, revenue: 0, cost: 0, margin: 0, discountValue: 0 }
+      const effectiveCost = Number(item.customCost ?? item.costPrice)
+      productMap[key] = { name: item.productName, sku: item.productSku, qty: 0, revenue: 0, cost: 0, margin: 0, discountValue: 0, isCustom: item.isCustomItem }
     }
     const qty = item.quantity
+    const effectiveCost = Number(item.customCost ?? item.costPrice)
     productMap[key].qty += qty
     productMap[key].revenue += Number(item.netPrice) * qty
-    productMap[key].cost += Number(item.costPrice) * qty
-    productMap[key].margin += Number(item.estimatedMargin ?? 0)
+    productMap[key].cost += effectiveCost * qty
+    productMap[key].margin += (Number(item.netPrice) - effectiveCost) * qty
     productMap[key].discountValue += (Number(item.listPrice) - Number(item.netPrice)) * qty
   }
   const byProduct = Object.entries(productMap)
@@ -306,6 +308,7 @@ export async function getMarginReport(from: Date, to: Date) {
       margin: d.margin,
       marginPct: d.revenue > 0 ? (d.margin / d.revenue) * 100 : 0,
       discountValue: d.discountValue,
+      isCustom: d.isCustom,
     }))
     .sort((a, b) => b.marginPct - a.marginPct)
 
@@ -325,11 +328,14 @@ export async function getMarginReport(from: Date, to: Date) {
 
   const categoryMap: Record<string, { qty: number; revenue: number; margin: number }> = {}
   for (const item of items) {
-    const cat = item.product?.category?.name ?? "Sem categoria"
+    const cat = item.isCustomItem
+      ? "Sob Medida / Avulso"
+      : (item.product?.category?.name ?? "Sem categoria")
     if (!categoryMap[cat]) categoryMap[cat] = { qty: 0, revenue: 0, margin: 0 }
+    const effectiveCost = Number(item.customCost ?? item.costPrice)
     categoryMap[cat].qty += item.quantity
     categoryMap[cat].revenue += Number(item.netPrice) * item.quantity
-    categoryMap[cat].margin += Number(item.estimatedMargin ?? 0)
+    categoryMap[cat].margin += (Number(item.netPrice) - effectiveCost) * item.quantity
   }
   const byCategory = Object.entries(categoryMap)
     .map(([name, d]) => ({
