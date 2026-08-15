@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma"
 import { auth } from "@/lib/auth"
+import { can } from "@/lib/rbac"
 import { createAuditLog } from "@/lib/audit"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
@@ -50,6 +51,21 @@ export async function updateLead(id: string, formData: unknown): Promise<ActionR
     return { success: true, data: undefined }
   } catch {
     return { success: false, error: "Erro ao atualizar lead" }
+  }
+}
+
+export async function deleteLead(id: string): Promise<ActionResult<void>> {
+  const session = await auth()
+  if (!session?.user) return { success: false, error: "Não autorizado" }
+  if (!can(session.user.permissions, "crm", "delete")) return { success: false, error: "Sem permissão" }
+
+  try {
+    await prisma.lead.update({ where: { id }, data: { deletedAt: new Date() } })
+    await createAuditLog({ userId: session.user.id, action: "DELETE", entity: "Lead", entityId: id })
+    revalidatePath("/crm")
+    return { success: true, data: undefined }
+  } catch {
+    return { success: false, error: "Erro ao excluir lead" }
   }
 }
 
@@ -247,6 +263,21 @@ export async function updateOpportunity(id: string, formData: unknown): Promise<
     return { success: true, data: undefined }
   } catch {
     return { success: false, error: "Erro ao atualizar oportunidade" }
+  }
+}
+
+export async function deleteOpportunity(id: string): Promise<ActionResult<void>> {
+  const session = await auth()
+  if (!session?.user) return { success: false, error: "Não autorizado" }
+  if (!can(session.user.permissions, "crm", "delete")) return { success: false, error: "Sem permissão" }
+
+  try {
+    await prisma.opportunity.update({ where: { id }, data: { deletedAt: new Date() } })
+    await createAuditLog({ userId: session.user.id, action: "DELETE", entity: "Opportunity", entityId: id })
+    revalidatePath("/crm")
+    return { success: true, data: undefined }
+  } catch {
+    return { success: false, error: "Erro ao excluir oportunidade" }
   }
 }
 

@@ -40,9 +40,10 @@ interface Stage {
 
 interface KanbanBoardProps {
   stages: Stage[]
+  canDelete?: boolean
 }
 
-export function KanbanBoard({ stages: initialStages }: KanbanBoardProps) {
+export function KanbanBoard({ stages: initialStages, canDelete = false }: KanbanBoardProps) {
   const router = useRouter()
   const [stages, setStages] = useState(initialStages)
   const [activeCard, setActiveCard] = useState<{ opp: Opportunity; stageId: string } | null>(null)
@@ -155,6 +156,7 @@ export function KanbanBoard({ stages: initialStages }: KanbanBoardProps) {
         opportunityId={selectedOppId}
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
+        canDelete={canDelete}
       />
     </div>
   )

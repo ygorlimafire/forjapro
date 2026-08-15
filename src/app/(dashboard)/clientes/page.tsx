@@ -1,5 +1,7 @@
 import { Metadata } from "next"
 import Link from "next/link"
+import { auth } from "@/lib/auth"
+import { can } from "@/lib/rbac"
 import { getCustomers } from "@/actions/customers"
 import { StatusBadge } from "@/components/ui/status-badge"
 import { CustomerActions } from "@/components/customers/customer-actions"
@@ -15,7 +17,8 @@ const mono: React.CSSProperties = { fontFamily: "'IBM Plex Mono', monospace" }
 
 export default async function ClientesPage({ searchParams }: Props) {
   const { q } = await searchParams
-  const customers = await getCustomers(q)
+  const [session, customers] = await Promise.all([auth(), getCustomers(q)])
+  const canDelete = session?.user ? can(session.user.permissions, "clientes", "delete") : false
 
   return (
     <div className="p-6 bg-background min-h-full">
@@ -96,7 +99,7 @@ export default async function ClientesPage({ searchParams }: Props) {
                   <div className="text-[#6b7178] truncate pr-3">{location}</div>
                   <div style={mono} className="text-[#6b7178] text-[13px]">{c.phone || "—"}</div>
                   <div><StatusBadge status={status} /></div>
-                  <div className="flex justify-end"><CustomerActions customerId={c.id} /></div>
+                  <div className="flex justify-end"><CustomerActions customerId={c.id} canDelete={canDelete} /></div>
                 </div>
 
                 {/* Mobile row */}

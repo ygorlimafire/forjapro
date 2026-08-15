@@ -3,13 +3,23 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { getOpportunityDetail, getUsers, updateOpportunityNotes } from "@/actions/crm"
+import { getOpportunityDetail, getUsers, updateOpportunityNotes, deleteOpportunity } from "@/actions/crm"
 import {
   Sheet,
   SheetClose,
   SheetContent,
   SheetTitle,
 } from "@/components/ui/sheet"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import {
   Tabs,
   TabsList,
@@ -25,6 +35,7 @@ import { formatCurrency, formatDate } from "@/lib/utils"
 import {
   X,
   Loader2,
+  Trash2,
   Building2,
   Phone,
   Mail,
@@ -73,15 +84,18 @@ interface Props {
   opportunityId: string | null
   open: boolean
   onOpenChange: (open: boolean) => void
+  canDelete?: boolean
 }
 
-export function OpportunityDrawer({ opportunityId, open, onOpenChange }: Props) {
+export function OpportunityDrawer({ opportunityId, open, onOpenChange, canDelete = false }: Props) {
   const router = useRouter()
   const [detail, setDetail] = useState<OpportunityDetail | null>(null)
   const [loading, setLoading] = useState(false)
   const [users, setUsers] = useState<{ id: string; name: string }[]>([])
   const [notesValue, setNotesValue] = useState("")
   const [notesSaving, setNotesSaving] = useState(false)
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     getUsers().then(setUsers)
@@ -106,6 +120,21 @@ export function OpportunityDrawer({ opportunityId, open, onOpenChange }: Props) 
     router.refresh()
   }
 
+  async function handleDelete() {
+    if (!opportunityId) return
+    setDeleting(true)
+    const result = await deleteOpportunity(opportunityId)
+    setDeleting(false)
+    setDeleteConfirmOpen(false)
+    if (result.success) {
+      toast.success("Oportunidade excluída")
+      onOpenChange(false)
+      router.refresh()
+    } else {
+      toast.error(result.error)
+    }
+  }
+
   async function saveNotes() {
     if (!opportunityId) return
     setNotesSaving(true)
@@ -120,6 +149,7 @@ export function OpportunityDrawer({ opportunityId, open, onOpenChange }: Props) 
   }
 
   return (
+    <>
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
@@ -162,6 +192,17 @@ export function OpportunityDrawer({ opportunityId, open, onOpenChange }: Props) 
                 users={users}
                 onSuccess={refresh}
               />
+            )}
+            {detail && canDelete && (
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                onClick={() => setDeleteConfirmOpen(true)}
+              >
+                <Trash2 size={16} />
+                <span className="sr-only">Excluir oportunidade</span>
+              </Button>
             )}
             <SheetClose
               render={
@@ -368,5 +409,27 @@ export function OpportunityDrawer({ opportunityId, open, onOpenChange }: Props) 
         )}
       </SheetContent>
     </Sheet>
+
+    <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Excluir oportunidade?</AlertDialogTitle>
+          <AlertDialogDescription>
+            A oportunidade <strong>&quot;{detail?.title}&quot;</strong> será marcada como excluída. Atividades e propostas vinculadas são preservadas no histórico.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={handleDelete}
+            disabled={deleting}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          >
+            {deleting ? "Excluindo..." : "Excluir"}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   )
 }

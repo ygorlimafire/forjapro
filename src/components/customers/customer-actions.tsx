@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { MoreHorizontal, Pencil, Trash2, Eye } from "lucide-react"
 
-export function CustomerActions({ customerId }: { customerId: string }) {
+export function CustomerActions({ customerId, canDelete = false }: { customerId: string; canDelete?: boolean }) {
   const router = useRouter()
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -57,14 +57,18 @@ export function CustomerActions({ customerId }: { customerId: string }) {
             <Pencil size={14} />
             Editar
           </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            className="text-destructive"
-            onClick={() => setDeleteOpen(true)}
-          >
-            <Trash2 size={14} />
-            Excluir
-          </DropdownMenuItem>
+          {canDelete && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="text-destructive"
+                onClick={() => setDeleteOpen(true)}
+              >
+                <Trash2 size={14} />
+                Excluir
+              </DropdownMenuItem>
+            </>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
 

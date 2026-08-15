@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma"
 import { auth } from "@/lib/auth"
+import { can } from "@/lib/rbac"
 import { createAuditLog } from "@/lib/audit"
 import { customerSchema } from "@/lib/validations/customer"
 import { revalidatePath } from "next/cache"
@@ -121,6 +122,7 @@ export async function updateCustomer(
 export async function deleteCustomer(id: string): Promise<ActionResult<void>> {
   const session = await auth()
   if (!session?.user) return { success: false, error: "Não autorizado" }
+  if (!can(session.user.permissions, "clientes", "delete")) return { success: false, error: "Sem permissão" }
 
   try {
     const old = await prisma.customer.findUnique({ where: { id } })

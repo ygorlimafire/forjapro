@@ -1,4 +1,6 @@
 import { Metadata } from "next"
+import { auth } from "@/lib/auth"
+import { can } from "@/lib/rbac"
 import { getKanbanData } from "@/actions/crm"
 import { KanbanBoard } from "@/components/crm/kanban-board"
 import { Target } from "lucide-react"
@@ -10,10 +12,12 @@ const mono: React.CSSProperties = { fontFamily: "'IBM Plex Mono', monospace" }
 export const metadata: Metadata = { title: "CRM — Funil de Vendas" }
 
 export default async function CRMPage() {
-  const [pipeline, customers] = await Promise.all([
+  const [session, pipeline, customers] = await Promise.all([
+    auth(),
     getKanbanData(),
     getCustomers(),
   ])
+  const canDelete = session?.user ? can(session.user.permissions, "crm", "delete") : false
 
   if (!pipeline) {
     return (
@@ -58,6 +62,7 @@ export default async function CRMPage() {
             value: opp.value ? Number(opp.value) : null,
           })),
         }))}
+        canDelete={canDelete}
       />
     </div>
   )
