@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import {
   DndContext,
@@ -47,6 +47,10 @@ export function KanbanBoard({ stages: initialStages, canDelete = false }: Kanban
   const router = useRouter()
   const [stages, setStages] = useState(initialStages)
   const [activeCard, setActiveCard] = useState<{ opp: Opportunity; stageId: string } | null>(null)
+
+  useEffect(() => {
+    setStages(initialStages)
+  }, [initialStages])
   const [dragging, setDragging] = useState(false)
   const [selectedOppId, setSelectedOppId] = useState<string | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -54,6 +58,16 @@ export function KanbanBoard({ stages: initialStages, canDelete = false }: Kanban
   function handleCardClick(id: string) {
     setSelectedOppId(id)
     setDrawerOpen(true)
+  }
+
+  function handleOpportunityDeleted(id: string) {
+    console.log("[KanbanBoard] onDeleted fired for id:", id)
+    setStages((prev) =>
+      prev.map((stage) => ({
+        ...stage,
+        opportunities: stage.opportunities.filter((o) => o.id !== id),
+      }))
+    )
   }
 
   const sensors = useSensors(
@@ -157,6 +171,7 @@ export function KanbanBoard({ stages: initialStages, canDelete = false }: Kanban
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
         canDelete={canDelete}
+        onDeleted={handleOpportunityDeleted}
       />
     </div>
   )

@@ -85,9 +85,10 @@ interface Props {
   open: boolean
   onOpenChange: (open: boolean) => void
   canDelete?: boolean
+  onDeleted?: (id: string) => void
 }
 
-export function OpportunityDrawer({ opportunityId, open, onOpenChange, canDelete = false }: Props) {
+export function OpportunityDrawer({ opportunityId, open, onOpenChange, canDelete = false, onDeleted }: Props) {
   const router = useRouter()
   const [detail, setDetail] = useState<OpportunityDetail | null>(null)
   const [loading, setLoading] = useState(false)
@@ -128,8 +129,9 @@ export function OpportunityDrawer({ opportunityId, open, onOpenChange, canDelete
     setDeleteConfirmOpen(false)
     if (result.success) {
       toast.success("Oportunidade excluída")
+      console.log("[OpportunityDrawer] delete confirmed, calling onDeleted for:", opportunityId)
       onOpenChange(false)
-      router.refresh()
+      if (opportunityId) onDeleted?.(opportunityId)
     } else {
       toast.error(result.error)
     }
