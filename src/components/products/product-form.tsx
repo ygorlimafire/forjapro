@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
 import { ImageUpload } from "@/components/products/image-upload"
-import { Save, Loader2 } from "lucide-react"
+import { Save, Loader2, Pencil } from "lucide-react"
 import { formatCurrency, calculateMargin } from "@/lib/utils"
 import type { Product, ProductCategory, ProductImage } from "@prisma/client"
 
@@ -42,19 +42,29 @@ export function ProductForm({ product, categories }: ProductFormProps) {
           categoryId: product.categoryId,
           description: product.description ?? "",
           mainImage: product.mainImage ?? "",
+          isCustomizable: product.isCustomizable ?? false,
           listPrice: Number(product.listPrice),
           costPrice: Number(product.costPrice),
           desiredMargin: product.desiredMargin ? Number(product.desiredMargin) : undefined,
           warranty: product.warranty ?? "",
           isActive: product.isActive,
         }
-      : { isActive: true, listPrice: 0, costPrice: 0 },
+      : { isActive: true, isCustomizable: false, listPrice: 0, costPrice: 0 },
   })
 
   const listPrice = watch("listPrice") || 0
   const costPrice = watch("costPrice") || 0
   const mainImage = watch("mainImage")
+  const isCustomizable = watch("isCustomizable")
   const realMargin = calculateMargin(listPrice, costPrice)
+
+  function handleCustomizableChange(v: boolean) {
+    setValue("isCustomizable", v)
+    if (v) {
+      setValue("listPrice", 0)
+      setValue("costPrice", 0)
+    }
+  }
 
   async function onSubmit(data: ProductFormData) {
     const result = isEdit
@@ -115,6 +125,34 @@ export function ProductForm({ product, categories }: ProductFormProps) {
         </CardContent>
       </Card>
 
+      {/* Tipo: Sob Medida */}
+      <Card className={isCustomizable ? "border-amber-300 dark:border-amber-800" : ""}>
+        <CardContent className="pt-6">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <Pencil size={16} className={`mt-0.5 shrink-0 ${isCustomizable ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground"}`} />
+              <div>
+                <p className="text-sm font-medium">Produto Sob Medida</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Preço e custo definidos por projeto. Não reserva estoque e não aparece em alertas de compra.
+                </p>
+              </div>
+            </div>
+            <Switch
+              checked={isCustomizable}
+              onCheckedChange={handleCustomizableChange}
+            />
+          </div>
+          {isCustomizable && (
+            <div className="mt-3 px-3 py-2 rounded-md bg-amber-50 border border-amber-200 dark:bg-amber-950/20 dark:border-amber-900/50">
+              <p className="text-xs text-amber-700 dark:text-amber-400">
+                Os campos de preço e custo são zerados — o vendedor define os valores em cada proposta.
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Foto principal */}
       <Card>
         <CardHeader>
@@ -138,26 +176,41 @@ export function ProductForm({ product, categories }: ProductFormProps) {
           <CardTitle className="text-base">Preços e Margens</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-3">
-          <div className="space-y-2">
-            <Label>Preço de Tabela (R$) *</Label>
-            <Input type="number" step="0.01" min="0" placeholder="0,00"
-              {...register("listPrice", { valueAsNumber: true })} />
-            {errors.listPrice && <p className="text-xs text-destructive">{errors.listPrice.message}</p>}
-          </div>
+          {isCustomizable ? (
+            <div className="sm:col-span-3 flex items-center gap-2 p-3 rounded-lg bg-muted text-sm text-muted-foreground">
+              <Pencil size={14} />
+              Preço de tabela não aplicável — definido por projeto em cada proposta.
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <Label>Preço de Tabela (R$) *</Label>
+              <Input type="number" step="0.01" min="0" placeholder="0,00"
+                {...register("listPrice", { valueAsNumber: true })} />
+              {errors.listPrice && <p className="text-xs text-destructive">{errors.listPrice.message}</p>}
+            </div>
+          )}
 
           <div className="space-y-2">
-            <Label>Custo de Compra (R$) *</Label>
-            <Input type="number" step="0.01" min="0" placeholder="0,00"
-              {...register("costPrice", { valueAsNumber: true })} />
+            <Label>Custo de Compra (R$){isCustomizable ? "" : " *"}</Label>
+            <Input
+              type="number" step="0.01" min="0" placeholder="0,00"
+              disabled={isCustomizable}
+              {...register("costPrice", { valueAsNumber: true })}
+            />
+            {isCustomizable && (
+              <p className="text-xs text-muted-foreground">Informado por projeto na proposta.</p>
+            )}
           </div>
 
-          <div className="space-y-2">
-            <Label>Margem Desejada (%)</Label>
-            <Input type="number" step="0.1" min="0" max="100" placeholder="0"
-              {...register("desiredMargin", { valueAsNumber: true })} />
-          </div>
+          {!isCustomizable && (
+            <div className="space-y-2">
+              <Label>Margem Desejada (%)</Label>
+              <Input type="number" step="0.1" min="0" max="100" placeholder="0"
+                {...register("desiredMargin", { valueAsNumber: true })} />
+            </div>
+          )}
 
-          {(listPrice > 0 || costPrice > 0) && (
+          {!isCustomizable && (listPrice > 0 || costPrice > 0) && (
             <div className="sm:col-span-3 p-3 rounded-lg bg-muted flex items-center gap-6 text-sm">
               <div>
                 <span className="text-muted-foreground">Margem real: </span>

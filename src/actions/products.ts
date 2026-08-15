@@ -24,10 +24,12 @@ export async function createProduct(formData: unknown): Promise<ActionResult<{ i
     })
     if (existing) return { success: false, error: "SKU já cadastrado" }
 
-    const { technicalSpecs, ...rest } = parsed.data
+    const { technicalSpecs, isCustomizable, ...rest } = parsed.data
     const product = await prisma.product.create({
       data: {
         ...rest,
+        isCustomizable: isCustomizable ?? false,
+        listPrice: isCustomizable ? 0 : rest.listPrice,
         technicalSpecs: technicalSpecs as Prisma.InputJsonValue ?? Prisma.JsonNull,
       },
     })
@@ -66,11 +68,13 @@ export async function updateProduct(
     if (existing) return { success: false, error: "SKU já cadastrado em outro produto" }
 
     const old = await prisma.product.findUnique({ where: { id } })
-    const { technicalSpecs, ...rest } = parsed.data
+    const { technicalSpecs, isCustomizable, ...rest } = parsed.data
     await prisma.product.update({
       where: { id },
       data: {
         ...rest,
+        isCustomizable: isCustomizable ?? false,
+        listPrice: isCustomizable ? 0 : rest.listPrice,
         technicalSpecs: technicalSpecs as Prisma.InputJsonValue ?? Prisma.JsonNull,
       },
     })

@@ -15,11 +15,15 @@ export const productSchema = z.object({
   description: z.string().optional(),
   technicalSpecs: z.record(z.string(), z.string()).optional(),
   mainImage: z.string().url("URL inválida").optional().or(z.literal("")),
-  listPrice: z.number().min(0.01, "Preço deve ser maior que zero"),
+  isCustomizable: z.boolean().default(false),
+  listPrice: z.number().min(0),
   costPrice: z.number().min(0, "Custo não pode ser negativo"),
   desiredMargin: z.number().min(0).max(100).optional(),
   warranty: z.string().optional(),
   isActive: z.boolean(),
-})
+}).refine(
+  (data) => data.isCustomizable || data.listPrice >= 0.01,
+  { message: "Preço deve ser maior que zero", path: ["listPrice"] }
+)
 
 export type ProductFormData = z.infer<typeof productSchema>
