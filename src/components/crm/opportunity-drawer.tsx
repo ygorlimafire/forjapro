@@ -129,7 +129,6 @@ export function OpportunityDrawer({ opportunityId, open, onOpenChange, canDelete
     setDeleteConfirmOpen(false)
     if (result.success) {
       toast.success("Oportunidade excluída")
-      console.log("[OpportunityDrawer] delete confirmed, calling onDeleted for:", opportunityId)
       onOpenChange(false)
       if (opportunityId) onDeleted?.(opportunityId)
     } else {

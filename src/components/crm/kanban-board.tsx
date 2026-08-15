@@ -61,7 +61,6 @@ export function KanbanBoard({ stages: initialStages, canDelete = false }: Kanban
   }
 
   function handleOpportunityDeleted(id: string) {
-    console.log("[KanbanBoard] onDeleted fired for id:", id)
     setStages((prev) =>
       prev.map((stage) => ({
         ...stage,
