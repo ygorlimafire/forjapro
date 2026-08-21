@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Loader2, Upload, FileCheck, X } from "lucide-react"
 import { markReceivableAsPaid, markPayableAsPaid } from "@/actions/financial"
+import { uploadFileDirect, UploadError } from "@/lib/upload"
 import { formatCurrency } from "@/lib/utils"
 
 const PAYMENT_METHODS = ["PIX", "TED / DOC", "Boleto", "Cartão de crédito", "Cartão de débito", "Dinheiro", "Cheque"]
@@ -60,22 +61,11 @@ export function MarkPaidDialog({ open, onOpenChange, type, id, amount, descripti
 
     setUploading(true)
     try {
-      const fd = new FormData()
-      fd.append("file", file)
-      fd.append("bucket", "financeiro")
-      fd.append("folder", "comprovantes")
-
-      const res = await fetch("/api/upload", { method: "POST", body: fd })
-      const data = await res.json()
-
-      if (!res.ok || data.error) {
-        toast.error(data.error ?? "Erro no upload")
-        return
-      }
-      setProofUrl(data.url)
+      const url = await uploadFileDirect(file, "financeiro", "comprovantes")
+      setProofUrl(url)
       setProofName(file.name)
-    } catch {
-      toast.error("Erro ao enviar comprovante")
+    } catch (err) {
+      toast.error(err instanceof UploadError ? err.message : "Erro ao enviar comprovante")
     } finally {
       setUploading(false)
       if (fileRef.current) fileRef.current.value = ""

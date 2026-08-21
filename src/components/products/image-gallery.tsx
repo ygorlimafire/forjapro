@@ -5,6 +5,7 @@ import { Trash2, Plus, ChevronUp, ChevronDown, Loader2 } from "lucide-react"
 import Image from "next/image"
 import { toast } from "sonner"
 import { addProductImage, removeProductImage, reorderProductImage } from "@/actions/products"
+import { uploadFileDirect, UploadError } from "@/lib/upload"
 import type { ProductImage } from "@prisma/client"
 
 interface ImageGalleryProps {
@@ -22,25 +23,18 @@ export function ImageGallery({ productId, images: initialImages }: ImageGalleryP
 
     setUploading(true)
     try {
-      const fd = new FormData()
-      fd.append("file", file)
-      fd.append("bucket", "products")
-      fd.append("folder", "gallery")
+      const url = await uploadFileDirect(file, "products", "gallery")
 
-      const res = await fetch("/api/upload", { method: "POST", body: fd })
-      const data = await res.json()
-      if (!res.ok) { toast.error(data.error); return }
-
-      const result = await addProductImage(productId, data.url)
+      const result = await addProductImage(productId, url)
       if (!result.success) { toast.error(result.error); return }
 
       setImages((prev) => [
         ...prev,
-        { id: result.data!.id, productId, url: data.url, alt: null, isPrimary: false, order: prev.length, createdAt: new Date() },
+        { id: result.data!.id, productId, url, alt: null, isPrimary: false, order: prev.length, createdAt: new Date() },
       ])
       toast.success("Imagem adicionada à galeria")
-    } catch {
-      toast.error("Erro ao adicionar imagem")
+    } catch (err) {
+      toast.error(err instanceof UploadError ? err.message : "Erro ao adicionar imagem")
     } finally {
       setUploading(false)
       e.target.value = ""

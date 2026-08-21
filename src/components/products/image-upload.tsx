@@ -6,6 +6,7 @@ import { Upload, X, ImageIcon, Loader2 } from "lucide-react"
 import Image from "next/image"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { uploadFileDirect, UploadError } from "@/lib/upload"
 
 interface ImageUploadProps {
   value?: string | null
@@ -24,23 +25,11 @@ export function ImageUpload({ value, onChange, className, aspectRatio = "video" 
 
     setUploading(true)
     try {
-      const fd = new FormData()
-      fd.append("file", file)
-      fd.append("bucket", "products")
-      fd.append("folder", "main")
-
-      const res = await fetch("/api/upload", { method: "POST", body: fd })
-      const data = await res.json()
-
-      if (!res.ok) {
-        toast.error(data.error || "Erro no upload")
-        return
-      }
-
-      onChange(data.url)
+      const url = await uploadFileDirect(file, "products", "main")
+      onChange(url)
       toast.success("Imagem enviada")
-    } catch {
-      toast.error("Erro ao enviar imagem")
+    } catch (err) {
+      toast.error(err instanceof UploadError ? err.message : "Erro ao enviar imagem")
     } finally {
       setUploading(false)
       if (inputRef.current) inputRef.current.value = ""
@@ -103,7 +92,7 @@ export function ImageUpload({ value, onChange, className, aspectRatio = "video" 
           <span className="text-sm font-medium">
             {uploading ? "Enviando..." : "Clique para selecionar"}
           </span>
-          <span className="text-xs">JPG, PNG, WEBP · máx 5MB</span>
+          <span className="text-xs">JPG, PNG, WEBP · máx 10MB</span>
         </button>
       )}
     </div>
