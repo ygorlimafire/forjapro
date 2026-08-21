@@ -1,11 +1,17 @@
+import { getSupabaseBrowser } from "./supabase-browser"
+
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif", "application/pdf"]
-const MAX_SIZE = 10 * 1024 * 1024 // 10MB
+const MAX_SIZE = 5 * 1024 * 1024 // 5MB
 
 export class UploadError extends Error {}
 
 /**
- * Uploads a file directly from the browser to Supabase Storage.
- * The server only generates a signed URL (no file bytes pass through Vercel).
+ * Uploads a file directly from the browser to Supabase Storage using the
+ * public anon key. Zero bytes pass through Vercel — the PUT goes
+ * browser → Supabase directly.
+ *
+ * Requires Storage INSERT policies on the target bucket for the anon role.
+ * See: docs/supabase-storage-policies.sql
  */
 export async function uploadFileDirect(
   file: File,
@@ -16,31 +22,20 @@ export async function uploadFileDirect(
     throw new UploadError("Formato não suportado. Use JPG, PNG, WEBP ou PDF.")
   }
   if (file.size > MAX_SIZE) {
-    throw new UploadError("Arquivo muito grande. Máximo 10MB.")
+    throw new UploadError("Arquivo muito grande. Máximo 5MB.")
   }
 
-  // Step 1: ask server for a signed upload URL (only metadata, no file)
-  const sigRes = await fetch("/api/upload/signed-url", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ fileName: file.name, fileType: file.type, fileSize: file.size, bucket, folder }),
-  })
-  const sigData = await sigRes.json()
-  if (!sigRes.ok) throw new UploadError(sigData.error ?? "Erro ao obter URL de upload")
+  const ext = file.name.split(".").pop()?.toLowerCase() || "jpg"
+  const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
 
-  const { signedUrl, publicUrl } = sigData as { signedUrl: string; publicUrl: string }
+  const supabase = getSupabaseBrowser()
 
-  // Step 2: PUT file directly from browser to Supabase (no Vercel function involved)
-  const uploadRes = await fetch(signedUrl, {
-    method: "PUT",
-    headers: { "Content-Type": file.type },
-    body: file,
-  })
+  const { error } = await supabase.storage
+    .from(bucket)
+    .upload(path, file, { contentType: file.type, upsert: false })
 
-  if (!uploadRes.ok) {
-    const msg = await uploadRes.text().catch(() => String(uploadRes.status))
-    throw new UploadError(`Falha no upload (${uploadRes.status}): ${msg}`)
-  }
+  if (error) throw new UploadError(error.message)
 
+  const { data: { publicUrl } } = supabase.storage.from(bucket).getPublicUrl(path)
   return publicUrl
 }
