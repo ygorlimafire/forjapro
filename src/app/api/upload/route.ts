@@ -41,6 +41,7 @@ export async function POST(request: NextRequest) {
       .upload(filename, buffer, { contentType: file.type, upsert: false })
 
     if (uploadError) {
+      console.error("[upload] Supabase storage error:", uploadError.message, { bucket, filename })
       return NextResponse.json({ error: uploadError.message }, { status: 500 })
     }
 
@@ -48,6 +49,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ url: publicUrl })
   } catch (err) {
+    console.error("[upload] Unexpected error:", err)
     const message = err instanceof Error ? err.message : "Erro no upload"
     return NextResponse.json({ error: message }, { status: 500 })
   }
