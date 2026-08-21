@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { can } from "@/lib/rbac"
@@ -117,21 +118,22 @@ function Logo({ collapsed }: { collapsed: boolean }) {
     <div
       className={cn(
         "flex items-center h-[60px] shrink-0 border-b border-white/[0.07]",
-        collapsed ? "justify-center px-2" : "px-4 gap-3"
+        collapsed ? "justify-center px-2" : "px-5"
       )}
     >
-      <div className="w-8 h-8 shrink-0 flex items-center justify-center border border-[var(--copper-600)]/40 bg-[var(--copper-600)]/10">
-        <span className="font-display font-bold text-[var(--copper-600)] text-sm leading-none">F</span>
-      </div>
-      {!collapsed && (
-        <div className="min-w-0">
-          <p className="font-display font-bold text-white text-[15px] leading-none tracking-[0.05em] uppercase">
-            FORJA PRO
-          </p>
-          <p className="font-mono text-[9px] text-[var(--steel-600)] tracking-[0.08em] uppercase mt-0.5">
-            Gestão Comercial
-          </p>
+      {collapsed ? (
+        <div className="w-8 h-8 shrink-0 flex items-center justify-center border border-[var(--copper-600)]/40 bg-[var(--copper-600)]/10">
+          <span className="font-display font-bold text-[var(--copper-600)] text-sm leading-none">F</span>
         </div>
+      ) : (
+        <Image
+          src="/logo/FORJA%20BRANCO.png"
+          alt="Forja Pro"
+          width={120}
+          height={40}
+          className="object-contain"
+          priority
+        />
       )}
     </div>
   )

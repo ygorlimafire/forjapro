@@ -305,16 +305,16 @@ const s = StyleSheet.create({
     borderRightStyle: "solid",
     padding: 4,
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
   },
   itemImage: {
     width: 44,
     height: 44,
     backgroundColor: "#eeeeee",
     marginRight: 6,
+    flexShrink: 0,
   },
   itemProductName: {
-    flex: 1,
     fontSize: 7.5,
     fontFamily: "Helvetica-Bold",
   },
@@ -323,6 +323,7 @@ const s = StyleSheet.create({
   itemSpecsCell: {
     width: COL.specs,
     padding: 4,
+    flexShrink: 0,
   },
   itemSpecsTitle: {
     fontSize: 6.5,
@@ -485,16 +486,18 @@ function Header({ company }: { company: CompanyPDFData }) {
   return (
     <View style={s.header}>
       {company.logo ? (
-        <Image src={company.logo} style={{ width: 34, height: 34, marginRight: 8 }} />
+        <Image src={company.logo} style={{ height: 32, width: 96, marginRight: 12, objectFit: "contain" }} />
       ) : (
-        <View style={s.logoBox}>
-          <Text style={s.logoBoxText}>F</Text>
-        </View>
+        <>
+          <View style={s.logoBox}>
+            <Text style={s.logoBoxText}>F</Text>
+          </View>
+          <View style={s.logoTextWrap}>
+            <Text style={s.logoName}>{company.name}</Text>
+            <Text style={s.logoTagline}>EQUIPAMENTOS PROFISSIONAIS</Text>
+          </View>
+        </>
       )}
-      <View style={s.logoTextWrap}>
-        <Text style={s.logoName}>{company.name}</Text>
-        <Text style={s.logoTagline}>EQUIPAMENTOS PROFISSIONAIS</Text>
-      </View>
     </View>
   )
 }
@@ -565,11 +568,11 @@ function ClientBlock({ proposal }: { proposal: ProposalPDFData }) {
 
 function ItemsHeaderRow() {
   return (
-    <View style={[s.itemsHeader, { paddingHorizontal: MARGIN }]}>
+    <View style={[s.itemsHeader, { marginHorizontal: MARGIN, paddingHorizontal: 4 }]}>
       <Text style={[s.itemsHeaderCell, { width: COL.num }]}>#</Text>
       <Text style={[s.itemsHeaderCell, { width: COL.code }]}>CÓD.</Text>
       <Text style={[s.itemsHeaderCell, { width: COL.product }]}>PRODUTO</Text>
-      <Text style={[s.itemsHeaderCell, { flex: 1 }]}>FICHA TÉCNICA</Text>
+      <Text style={[s.itemsHeaderCell, { width: COL.specs }]}>FICHA TÉCNICA</Text>
     </View>
   )
 }
@@ -598,10 +601,10 @@ function ItemRow({
             <Image src={item.productImage} style={s.itemImage} />
           ) : (
             <View style={[s.itemImage, { justifyContent: "center", alignItems: "center" }]}>
-              <Text style={{ fontSize: 6, color: "#aaaaaa" }}>{item.isCustomItem ? "SOB\nMEDIDA" : "SEM\nFOTO"}</Text>
+              <Text style={{ fontSize: 6, color: "#aaaaaa", textAlign: "center" }}>{item.isCustomItem ? "SOB\nMEDIDA" : "SEM\nFOTO"}</Text>
             </View>
           )}
-          <View style={{ flex: 1 }}>
+          <View style={{ flex: 1, overflow: "hidden" }}>
             <Text style={s.itemProductName}>{item.productName}</Text>
             {item.isCustomItem && (
               <Text style={{ fontSize: 6, color: "#b45309", marginTop: 2 }}>PROJETO SOB MEDIDA</Text>

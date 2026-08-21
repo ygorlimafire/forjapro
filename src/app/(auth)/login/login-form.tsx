@@ -7,6 +7,7 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import Link from "next/link"
+import Image from "next/image"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Eye, EyeOff, Loader2 } from "lucide-react"
@@ -75,27 +76,14 @@ export function LoginForm() {
 
       {/* Logo mark */}
       <div className="mb-9">
-        <div className="flex items-center gap-3">
-          <div
-            className="w-10 h-10 shrink-0 flex items-center justify-center"
-            style={{
-              border: "1px solid rgba(181,101,47,0.35)",
-              backgroundColor: "rgba(181,101,47,0.12)",
-            }}
-          >
-            <span className="font-display font-bold text-[#b5652f] text-lg leading-none">
-              F
-            </span>
-          </div>
-          <div>
-            <p className="font-display font-bold text-white text-xl leading-none tracking-[0.05em] uppercase">
-              FORJA PRO
-            </p>
-            <p className="font-mono text-[9px] text-[#6b7178] tracking-[0.08em] uppercase mt-0.5">
-              Equipamentos Profissionais
-            </p>
-          </div>
-        </div>
+        <Image
+          src="/logo/FORJA%20BRANCO.png"
+          alt="Forja Pro"
+          width={180}
+          height={60}
+          className="object-contain"
+          priority
+        />
       </div>
 
       {/* Eyebrow */}

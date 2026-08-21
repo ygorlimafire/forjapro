@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from "next/server"
 import React from "react"
+import path from "path"
+import fs from "fs"
 import { renderToBuffer } from "@react-pdf/renderer"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { ProposalPDF, type ProposalPDFData, type CompanyPDFData, type TermPDFData } from "@/components/proposals/proposal-pdf"
+
+const BRAND_LOGO_PATH = path.join(process.cwd(), "public/logo/FORJA BRANCO.png")
 
 export const dynamic = "force-dynamic"
 
@@ -83,10 +87,12 @@ export async function GET(
     })),
   }
 
+  const brandLogo = settings?.logo ?? (fs.existsSync(BRAND_LOGO_PATH) ? BRAND_LOGO_PATH : null)
+
   const companyData: CompanyPDFData = {
     name: settings?.name ?? "FORJA PRO",
     cnpj: settings?.cnpj ?? null,
-    logo: settings?.logo ?? null,
+    logo: brandLogo,
     phone: settings?.phone ?? null,
     email: settings?.email ?? null,
     street: settings?.street ?? null,
