@@ -6,6 +6,7 @@ export const dynamic = "force-dynamic"
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif", "application/pdf"]
 const MAX_SIZE = 10 * 1024 * 1024 // 10MB
+const MAX_RETRIES = 2
 
 export async function POST(request: NextRequest) {
   const session = await auth()
@@ -26,20 +27,42 @@ export async function POST(request: NextRequest) {
   const ext = (fileName as string).split(".").pop()?.toLowerCase() || "jpg"
   const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
 
-  try {
-    const supabase = createSupabaseAdmin()
-    const { data, error } = await supabase.storage.from(bucket).createSignedUploadUrl(path)
+  const supabase = createSupabaseAdmin()
 
-    if (error || !data) {
-      console.error("[signed-url] error:", error?.message, { bucket, path })
-      return NextResponse.json({ error: error?.message ?? "Erro ao gerar URL de upload" }, { status: 500 })
+  for (let attempt = 1; attempt <= MAX_RETRIES + 1; attempt++) {
+    try {
+      const { data, error } = await supabase.storage.from(bucket).createSignedUploadUrl(path)
+
+      if (!error && data) {
+        const publicUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${bucket}/${path}`
+        return NextResponse.json({ signedUrl: data.signedUrl, path, publicUrl })
+      }
+
+      const msg = error?.message ?? "Erro ao gerar URL"
+      const isNetwork = msg.toLowerCase().includes("fetch failed") ||
+        msg.toLowerCase().includes("network") ||
+        msg.toLowerCase().includes("econnreset")
+
+      console.error(`[signed-url] attempt ${attempt}/${MAX_RETRIES + 1}:`, msg, { bucket, path, isNetwork })
+
+      if (!isNetwork || attempt > MAX_RETRIES) {
+        return NextResponse.json({ error: msg }, { status: 500 })
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Erro interno"
+      const isNetwork = msg.toLowerCase().includes("fetch failed") ||
+        msg.toLowerCase().includes("network") ||
+        msg.toLowerCase().includes("econnreset")
+
+      console.error(`[signed-url] attempt ${attempt}/${MAX_RETRIES + 1} threw:`, msg, { isNetwork })
+
+      if (!isNetwork || attempt > MAX_RETRIES) {
+        return NextResponse.json({ error: msg }, { status: 500 })
+      }
     }
 
-    const publicUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${bucket}/${path}`
-
-    return NextResponse.json({ signedUrl: data.signedUrl, path, publicUrl })
-  } catch (err) {
-    console.error("[signed-url] unexpected:", err instanceof Error ? err.message : err)
-    return NextResponse.json({ error: "Erro interno" }, { status: 500 })
+    await new Promise((r) => setTimeout(r, attempt * 500))
   }
+
+  return NextResponse.json({ error: "Falha ao gerar URL após múltiplas tentativas" }, { status: 500 })
 }
