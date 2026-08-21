@@ -77,7 +77,7 @@ export function LoginForm() {
       {/* Logo mark */}
       <div className="mb-9">
         <Image
-          src="/logo/FORJA%20BRANCO.png"
+          src="/logo/FORJA%20BRANCO%20SEM%20FUNDO-%20Editado.png"
           alt="Forja Pro"
           width={180}
           height={60}

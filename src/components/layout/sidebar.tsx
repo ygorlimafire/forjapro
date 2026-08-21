@@ -127,7 +127,7 @@ function Logo({ collapsed }: { collapsed: boolean }) {
         </div>
       ) : (
         <Image
-          src="/logo/FORJA%20BRANCO.png"
+          src="/logo/FORJA%20BRANCO%20SEM%20FUNDO-%20Editado.png"
           alt="Forja Pro"
           width={120}
           height={40}

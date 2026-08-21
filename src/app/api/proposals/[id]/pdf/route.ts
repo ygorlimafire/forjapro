@@ -7,7 +7,7 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { ProposalPDF, type ProposalPDFData, type CompanyPDFData, type TermPDFData } from "@/components/proposals/proposal-pdf"
 
-const BRAND_LOGO_PATH = path.join(process.cwd(), "public/logo/FORJA BRANCO.png")
+const BRAND_LOGO_PATH = path.join(process.cwd(), "public/logo/FORJA BRANCO SEM FUNDO- Editado.png")
 
 export const dynamic = "force-dynamic"
 
