@@ -4,7 +4,8 @@ import { prisma } from "@/lib/prisma"
 import { auth } from "@/lib/auth"
 import { createAuditLog } from "@/lib/audit"
 import { revalidatePath } from "next/cache"
-import { stockEntrySchema, stockAdjustSchema } from "@/lib/validations/stock"
+import { stockEntrySchema, stockAdjustSchema, stockBatchCountSchema } from "@/lib/validations/stock"
+import { can } from "@/lib/rbac"
 import type { ActionResult } from "@/types"
 import type { Prisma } from "@prisma/client"
 
@@ -536,4 +537,78 @@ export async function getStockSummary() {
   const zeroStock = stocks.filter((ps) => ps.availableQty === 0).length
 
   return { totalValue, lowStock, zeroStock }
+}
+
+// ─── Batch stock count ────────────────────────────────────────────────────────
+
+export async function batchCountStock(
+  rawItems: Array<{ productId: string; quantity: number }>
+): Promise<ActionResult<{ adjusted: number; total: number }>> {
+  const session = await auth()
+  if (!session?.user) return { success: false, error: "Não autorizado" }
+  if (!can(session.user.permissions, "estoque", "edit")) {
+    return { success: false, error: "Sem permissão para realizar contagem de estoque" }
+  }
+
+  const parsed = stockBatchCountSchema.safeParse({ items: rawItems })
+  if (!parsed.success) return { success: false, error: parsed.error.issues[0].message }
+
+  const { items } = parsed.data
+  const warehouse = await getOrCreateDefaultWarehouse()
+
+  try {
+    let adjusted = 0
+
+    await prisma.$transaction(async (tx) => {
+      for (const { productId, quantity: newQty } of items) {
+        const stock = await tx.productStock.findUnique({
+          where: { productId_warehouseId: { productId, warehouseId: warehouse.id } },
+        })
+
+        const currentQty = stock?.physicalQty ?? 0
+        const delta = newQty - currentQty
+
+        if (delta !== 0) {
+          await tx.stockMovement.create({
+            data: {
+              productId,
+              warehouseId: warehouse.id,
+              type: "AJUSTE",
+              quantity: Math.abs(delta),
+              reason: "Contagem em lote",
+              userId: session.user.id,
+            },
+          })
+          adjusted++
+        }
+
+        if (stock) {
+          await tx.productStock.update({
+            where: { productId_warehouseId: { productId, warehouseId: warehouse.id } },
+            data: {
+              physicalQty: newQty,
+              availableQty: Math.max(0, newQty - stock.reservedQty),
+            },
+          })
+        } else {
+          await tx.productStock.create({
+            data: {
+              productId,
+              warehouseId: warehouse.id,
+              physicalQty: newQty,
+              reservedQty: 0,
+              availableQty: newQty,
+              avgCost: 0,
+            },
+          })
+        }
+      }
+    })
+
+    revalidatePath("/estoque")
+    return { success: true, data: { adjusted, total: items.length } }
+  } catch (err) {
+    console.error("[batchCountStock]", err)
+    return { success: false, error: "Erro ao salvar contagem" }
+  }
 }
