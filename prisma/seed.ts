@@ -8,7 +8,7 @@ async function main() {
 
   // ── Permissões ────────────────────────────────────────────────────────────
   const modules = ["dashboard","crm","clientes","propostas","pedidos","produtos","estoque","compras","financeiro","relatorios","configuracoes"]
-  const actions = ["view","create","edit","delete","export"]
+  const actions = ["view","create","edit","delete","export","approve"]
 
   const permissions = await Promise.all(
     modules.flatMap((module) =>
@@ -43,7 +43,7 @@ async function main() {
         "dashboard:view",
         "crm:view","crm:create","crm:edit","crm:delete",
         "clientes:view","clientes:create","clientes:edit",
-        "propostas:view","propostas:create","propostas:edit",
+        "propostas:view","propostas:create","propostas:edit","propostas:approve",
         "pedidos:view","pedidos:create","pedidos:edit",
         "produtos:view",
         "estoque:view",
