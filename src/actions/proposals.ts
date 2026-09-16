@@ -76,6 +76,9 @@ export async function createProposal(
           paymentCondition: rest.paymentCondition || null,
           installments: rest.installments || null,
           installmentDueDates: rest.installmentDueDates || [],
+          installmentAmounts: rest.installmentAmounts || [],
+          downPayment: rest.downPayment ?? null,
+          downPaymentDate: rest.downPaymentDate || null,
           freight,
           totalProducts,
           totalAmount,
@@ -175,6 +178,9 @@ export async function updateProposal(
           paymentCondition: rest.paymentCondition || null,
           installments: rest.installments || null,
           installmentDueDates: rest.installmentDueDates || [],
+          installmentAmounts: rest.installmentAmounts || [],
+          downPayment: rest.downPayment ?? null,
+          downPaymentDate: rest.downPaymentDate || null,
           freight,
           totalProducts,
           totalAmount,
@@ -291,22 +297,51 @@ export async function approveProposal(id: string): Promise<ActionResult<void>> {
       })
 
       const installments = proposal.installments || 1
-      const amountPerInstallment = Number(proposal.totalAmount) / installments
-      const receivables = Array.from({ length: installments }, (_, i) => {
+      const hasAmounts = proposal.installmentAmounts && proposal.installmentAmounts.length === installments
+      const defaultAmount = Number(proposal.totalAmount) / (installments + (proposal.downPayment ? 0 : 0))
+
+      // Build receivables: entrada (if any) + installments
+      const receivableRows: Array<{
+        orderId: string; customerId: string; installment: number;
+        totalInstallments: number; amount: number; dueDate: Date;
+      }> = []
+
+      const totalSlots = installments + (proposal.downPayment ? 1 : 0)
+
+      if (proposal.downPayment && Number(proposal.downPayment) > 0) {
+        const ddDate = proposal.downPaymentDate
+          ? new Date(proposal.downPaymentDate + "T12:00:00")
+          : now
+        receivableRows.push({
+          orderId: order.id,
+          customerId: proposal.customerId,
+          installment: 1,
+          totalInstallments: totalSlots,
+          amount: Number(proposal.downPayment),
+          dueDate: ddDate,
+        })
+      }
+
+      const installmentOffset = proposal.downPayment ? 1 : 0
+      for (let i = 0; i < installments; i++) {
         const storedDate = proposal.installmentDueDates?.[i]
         const dueDate = storedDate
           ? new Date(storedDate + "T12:00:00")
           : addDays(now, 30 * (i + 1))
-        return {
+        const amount = hasAmounts
+          ? (parseFloat(proposal.installmentAmounts![i]) || defaultAmount)
+          : defaultAmount
+        receivableRows.push({
           orderId: order.id,
           customerId: proposal.customerId,
-          installment: i + 1,
-          totalInstallments: installments,
-          amount: amountPerInstallment,
+          installment: installmentOffset + i + 1,
+          totalInstallments: totalSlots,
+          amount,
           dueDate,
-        }
-      })
-      await tx.accountReceivable.createMany({ data: receivables })
+        })
+      }
+
+      await tx.accountReceivable.createMany({ data: receivableRows })
 
       // Only reserve stock for regular (non-custom) items with a product
       const stockableItems = proposal.items.filter((i) => !i.isCustomItem && i.productId)

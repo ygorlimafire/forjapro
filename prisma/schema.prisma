@@ -594,9 +594,12 @@ model SalesProposal {
   nature           String
   validityDays     Int
   validityDate     DateTime
-  paymentCondition String?
-  installments     Int?
+  paymentCondition    String?
+  installments        Int?
   installmentDueDates String[]
+  installmentAmounts  String[]
+  downPayment         Decimal?  @db.Decimal(10, 2)
+  downPaymentDate     String?
   freight          Decimal        @default(0) @db.Decimal(10, 2)
   totalProducts    Decimal        @db.Decimal(10, 2)
   totalAmount      Decimal        @db.Decimal(10, 2)

@@ -18,6 +18,10 @@ export type ProposalPDFData = {
   nature: string
   paymentCondition: string | null
   installments: number | null
+  installmentDueDates: string[]
+  installmentAmounts: string[]
+  downPayment: number | null
+  downPaymentDate: string | null
   freight: number
   totalProducts: number
   totalAmount: number
@@ -674,12 +678,63 @@ function TotalsSection({
           <Text style={s.infoValue}>{proposal.paymentCondition}</Text>
         </View>
       )}
-      {proposal.installments && proposal.installments > 1 && (
-        <View style={s.infoRow}>
-          <Text style={s.infoLabel}>Parcelas:</Text>
-          <Text style={s.infoValue}>{proposal.installments}x</Text>
-        </View>
-      )}
+
+      {/* Installment table — shown when there's an entrada or multiple installments with dates/amounts */}
+      {(proposal.downPayment || (proposal.installments && proposal.installments > 1)) && (() => {
+        const hasAmounts = proposal.installmentAmounts && proposal.installmentAmounts.length > 0
+        const n = proposal.installments ?? 1
+        const defaultAmt = proposal.totalAmount / n
+        const totalSlots = n + (proposal.downPayment ? 1 : 0)
+
+        const rows: Array<{ label: string; date: string; amount: number }> = []
+
+        if (proposal.downPayment && proposal.downPayment > 0) {
+          rows.push({
+            label: "Entrada",
+            date: proposal.downPaymentDate
+              ? fmtDate(new Date(proposal.downPaymentDate + "T12:00:00"))
+              : "—",
+            amount: proposal.downPayment,
+          })
+        }
+
+        for (let i = 0; i < n; i++) {
+          const storedDate = proposal.installmentDueDates?.[i]
+          rows.push({
+            label: `Parcela ${i + 1}/${totalSlots}`,
+            date: storedDate ? fmtDate(new Date(storedDate + "T12:00:00")) : "—",
+            amount: hasAmounts
+              ? (parseFloat(proposal.installmentAmounts![i] ?? "") || defaultAmt)
+              : defaultAmt,
+          })
+        }
+
+        return (
+          <View style={{ marginTop: 8 }}>
+            {/* Table header */}
+            <View style={{ flexDirection: "row", backgroundColor: C.dark, paddingVertical: 3, paddingHorizontal: 4 }}>
+              <Text style={{ color: "#fff", fontSize: 6.5, fontFamily: "Helvetica-Bold", flex: 1 }}>PARCELA</Text>
+              <Text style={{ color: "#fff", fontSize: 6.5, fontFamily: "Helvetica-Bold", width: 70, textAlign: "center" }}>VENCIMENTO</Text>
+              <Text style={{ color: "#fff", fontSize: 6.5, fontFamily: "Helvetica-Bold", width: 80, textAlign: "right" }}>VALOR</Text>
+            </View>
+            {rows.map((row, idx) => (
+              <View
+                key={idx}
+                style={{
+                  flexDirection: "row",
+                  backgroundColor: idx % 2 === 0 ? "#f5f5f5" : "#ffffff",
+                  paddingVertical: 3,
+                  paddingHorizontal: 4,
+                }}
+              >
+                <Text style={{ fontSize: 6.5, flex: 1 }}>{row.label}</Text>
+                <Text style={{ fontSize: 6.5, width: 70, textAlign: "center", color: C.textMuted }}>{row.date}</Text>
+                <Text style={{ fontSize: 6.5, width: 80, textAlign: "right", fontFamily: "Helvetica-Bold" }}>{brl(row.amount)}</Text>
+              </View>
+            ))}
+          </View>
+        )
+      })()}
       {proposal.seller && (
         <View style={s.infoRow}>
           <Text style={s.infoLabel}>Vendedor:</Text>

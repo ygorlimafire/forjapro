@@ -54,6 +54,12 @@ export function ProposalForm({
     return Array.from({ length: n }, (_, i) => addMonths(todayIso, i + 1))
   }
 
+  function buildInstallmentAmounts(n: number, total: number, entrada: number = 0): string[] {
+    const remainder = Math.max(0, total - entrada)
+    const per = n > 0 ? remainder / n : 0
+    return Array.from({ length: n }, () => per.toFixed(2))
+  }
+
   const [pickerOpen, setPickerOpen] = useState(false)
   const [showQuickCustomer, setShowQuickCustomer] = useState(false)
   const [creatingCustomer, setCreatingCustomer] = useState(false)
@@ -95,6 +101,9 @@ export function ProposalForm({
           paymentCondition: proposal.paymentCondition || "",
           installments: proposal.installments || 1,
           installmentDueDates: proposal.installmentDueDates || [],
+          installmentAmounts: proposal.installmentAmounts || [],
+          downPayment: proposal.downPayment ? Number(proposal.downPayment) : undefined,
+          downPaymentDate: proposal.downPaymentDate || "",
           freight: Number(proposal.freight),
           notes: proposal.notes || "",
           additionalInfo: proposal.additionalInfo || "",
@@ -106,6 +115,7 @@ export function ProposalForm({
           freight: 0,
           installments: 1,
           installmentDueDates: [],
+          installmentAmounts: [],
           items: [],
         },
   })
@@ -117,6 +127,11 @@ export function ProposalForm({
   const freight = watch("freight") || 0
   const installments = watch("installments") || 1
   const installmentDueDates = watch("installmentDueDates") || []
+  const installmentAmounts = watch("installmentAmounts") || []
+  const downPayment = watch("downPayment")
+  const [hasDownPayment, setHasDownPayment] = useState(
+    !!proposal?.downPayment && Number(proposal.downPayment) > 0
+  )
 
   const totalProducts = items.reduce((sum, item) => sum + (item.subtotal || 0), 0)
   const totalAmount = totalProducts + freight
@@ -442,26 +457,95 @@ export function ProposalForm({
                 value={installments}
                 onChange={(e) => {
                   const n = parseInt(e.target.value) || 1
+                  const entrada = hasDownPayment ? (downPayment ?? 0) : 0
                   setValue("installments", n)
                   setValue("installmentDueDates", n > 1 ? buildInstallmentDates(n) : [])
+                  setValue("installmentAmounts", n > 1 ? buildInstallmentAmounts(n, totalAmount, entrada) : [])
                 }}
               />
             </div>
 
-            {installments > 1 && installmentDueDates.length > 0 && (
+            {/* Entrada toggle */}
+            <div className="sm:col-span-2 flex items-center gap-2 pt-1">
+              <input
+                id="hasDownPayment"
+                type="checkbox"
+                checked={hasDownPayment}
+                onChange={(e) => {
+                  setHasDownPayment(e.target.checked)
+                  if (!e.target.checked) {
+                    setValue("downPayment", undefined)
+                    setValue("downPaymentDate", "")
+                    // recompute installment amounts without entrada
+                    if (installments > 1) {
+                      setValue("installmentAmounts", buildInstallmentAmounts(installments, totalAmount, 0))
+                    }
+                  }
+                }}
+                className="h-4 w-4 accent-foreground"
+              />
+              <label htmlFor="hasDownPayment" className="text-sm cursor-pointer select-none">
+                Tem entrada (pagamento antecipado)?
+              </label>
+            </div>
+
+            {hasDownPayment && (
               <div className="sm:col-span-2 space-y-1.5">
-                <Label className="text-xs text-muted-foreground">
-                  Datas de vencimento — edite livremente, sugestão +30 dias
-                </Label>
-                <div className="max-h-44 overflow-y-auto space-y-1.5 pr-1">
-                  {installmentDueDates.map((d, i) => (
+                <Label className="text-xs text-muted-foreground">Entrada</Label>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground w-20 shrink-0 font-medium">Entrada</span>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="0,00"
+                    className="h-8 text-xs"
+                    value={downPayment ?? ""}
+                    onChange={(e) => {
+                      const val = parseFloat(e.target.value) || 0
+                      setValue("downPayment", val || undefined)
+                      // recompute parcelas automaticamente
+                      if (installments > 1) {
+                        setValue("installmentAmounts", buildInstallmentAmounts(installments, totalAmount, val))
+                      }
+                    }}
+                  />
+                  <Input
+                    type="date"
+                    className="h-8 text-xs"
+                    {...register("downPaymentDate")}
+                  />
+                </div>
+              </div>
+            )}
+
+            {installments > 1 && (
+              <div className="sm:col-span-2 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs text-muted-foreground">
+                    Parcelas — data e valor (editáveis)
+                  </Label>
+                  <button
+                    type="button"
+                    className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
+                    onClick={() => {
+                      const entrada = hasDownPayment ? (downPayment ?? 0) : 0
+                      setValue("installmentAmounts", buildInstallmentAmounts(installments, totalAmount, entrada))
+                      setValue("installmentDueDates", buildInstallmentDates(installments))
+                    }}
+                  >
+                    Redistribuir igualmente
+                  </button>
+                </div>
+                <div className="max-h-56 overflow-y-auto space-y-1.5 pr-1">
+                  {Array.from({ length: installments }, (_, i) => (
                     <div key={i} className="flex items-center gap-2">
                       <span className="text-xs text-muted-foreground w-20 shrink-0">
                         Parcela {i + 1}/{installments}
                       </span>
                       <Input
                         type="date"
-                        value={d}
+                        value={installmentDueDates[i] ?? ""}
                         onChange={(e) => {
                           const updated = [...installmentDueDates]
                           updated[i] = e.target.value
@@ -469,9 +553,35 @@ export function ProposalForm({
                         }}
                         className="h-8 text-xs"
                       />
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="0,00"
+                        value={installmentAmounts[i] ?? ""}
+                        onChange={(e) => {
+                          const updated = [...installmentAmounts]
+                          updated[i] = e.target.value
+                          setValue("installmentAmounts", updated)
+                        }}
+                        className="h-8 text-xs w-28"
+                      />
                     </div>
                   ))}
                 </div>
+                {/* Verificação de soma */}
+                {(() => {
+                  const entradaVal = hasDownPayment ? (downPayment ?? 0) : 0
+                  const parcelasSum = installmentAmounts.reduce((s, v) => s + (parseFloat(v) || 0), 0)
+                  const total = entradaVal + parcelasSum
+                  const diff = total - totalAmount
+                  if (Math.abs(diff) < 0.01) return null
+                  return (
+                    <p className="text-xs text-red-500 mt-1">
+                      Soma ({formatCurrency(total)}) difere do total ({formatCurrency(totalAmount)}) em {formatCurrency(Math.abs(diff))}
+                    </p>
+                  )
+                })()}
               </div>
             )}
 
@@ -512,9 +622,26 @@ export function ProposalForm({
                   </span>
                 </div>
                 {installments > 1 && (
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>{installments}× de</span>
-                    <span>{formatCurrency(totalAmount / installments)}</span>
+                  <div className="space-y-1 text-xs text-muted-foreground border-t pt-2 mt-1">
+                    {hasDownPayment && downPayment && downPayment > 0 && (
+                      <div className="flex justify-between">
+                        <span>Entrada</span>
+                        <span>{formatCurrency(downPayment)}</span>
+                      </div>
+                    )}
+                    {installmentAmounts.length > 0 ? (
+                      installmentAmounts.map((v, i) => (
+                        <div key={i} className="flex justify-between">
+                          <span>Parcela {i + 1}/{installments}</span>
+                          <span>{formatCurrency(parseFloat(v) || 0)}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="flex justify-between">
+                        <span>{installments}× de</span>
+                        <span>{formatCurrency(totalAmount / installments)}</span>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
