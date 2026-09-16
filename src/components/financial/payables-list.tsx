@@ -9,7 +9,9 @@ import { MarkPaidDialog } from "./mark-paid-dialog"
 import { NewAccountDialog } from "./new-account-dialog"
 import { updatePayableExpenseCategory } from "@/actions/financial"
 import { CsvExportButton } from "./csv-export-button"
-import { CheckCircle2, AlertTriangle, Clock, XCircle, FileText, ExternalLink, Pencil, Check, Plus, RefreshCw } from "lucide-react"
+import { CheckCircle2, AlertTriangle, Clock, XCircle, FileText, ExternalLink, Pencil, Check, Plus, RefreshCw, Trash2, X } from "lucide-react"
+import { deletePayable } from "@/actions/financial"
+import { EditAccountDialog } from "./edit-account-dialog"
 import type { PayableStatus } from "@prisma/client"
 
 type ExpenseCategory = { id: string; name: string; color: string }
@@ -132,10 +134,27 @@ function CategoryCell({ payable, categories }: { payable: Payable; categories: E
 }
 
 export function PayablesList({ payables, bankAccounts = [], expenseCategories = [], suppliers = [] }: Props) {
+  const router = useRouter()
   const [selected, setSelected] = useState<Payable | null>(null)
   const [newDialogOpen, setNewDialogOpen] = useState(false)
+  const [editing, setEditing] = useState<Payable | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
   const today = new Date()
   today.setHours(0, 0, 0, 0)
+
+  async function handleDelete(id: string) {
+    setDeleting(true)
+    const result = await deletePayable(id)
+    setDeleting(false)
+    if (!result.success) {
+      toast.error(result.error)
+    } else {
+      toast.success("Conta excluída")
+      setConfirmDelete(null)
+      router.refresh()
+    }
+  }
 
   const totalPending = payables
     .filter((p) => p.status === "PENDENTE")
@@ -262,6 +281,47 @@ export function PayablesList({ payables, bankAccounts = [], expenseCategories = 
                     Marcar pago
                   </button>
                 )}
+                {confirmDelete === p.id ? (
+                  <div className="flex items-center justify-end gap-1 pt-1">
+                    <span className="text-xs text-muted-foreground">Excluir?</span>
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(p.id)}
+                      disabled={deleting}
+                      className="text-red-500 hover:text-red-600"
+                      title="Confirmar exclusão"
+                    >
+                      <Check size={13} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmDelete(null)}
+                      className="text-muted-foreground hover:text-foreground"
+                      title="Cancelar"
+                    >
+                      <X size={13} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-end gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setEditing(p)}
+                      className="text-muted-foreground hover:text-foreground"
+                      title="Editar"
+                    >
+                      <Pencil size={13} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmDelete(p.id)}
+                      className="text-muted-foreground hover:text-red-500"
+                      title="Excluir"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           )
@@ -291,6 +351,16 @@ export function PayablesList({ payables, bankAccounts = [], expenseCategories = 
         expenseCategories={expenseCategories}
         suppliers={suppliers}
       />
+
+      {editing && (
+        <EditAccountDialog
+          type="payable"
+          item={editing}
+          open={!!editing}
+          onOpenChange={(v) => { if (!v) setEditing(null) }}
+          expenseCategories={expenseCategories}
+        />
+      )}
     </div>
   )
 }

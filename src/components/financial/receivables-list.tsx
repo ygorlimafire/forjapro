@@ -7,7 +7,11 @@ import { MarkPaidDialog } from "./mark-paid-dialog"
 import { NewAccountDialog } from "./new-account-dialog"
 import { NegotiationDialog } from "./negotiation-dialog"
 import { CsvExportButton } from "./csv-export-button"
-import { CheckCircle2, AlertTriangle, Clock, XCircle, FileText, ExternalLink, Plus, RotateCcw } from "lucide-react"
+import { CheckCircle2, AlertTriangle, Clock, XCircle, FileText, ExternalLink, Plus, RotateCcw, Pencil, Trash2, Check, X } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { toast } from "sonner"
+import { deleteReceivable } from "@/actions/financial"
+import { EditAccountDialog } from "./edit-account-dialog"
 import type { ReceivableStatus } from "@prisma/client"
 
 type Receivable = {
@@ -80,11 +84,28 @@ function computeAdjustedAmount(rec: Receivable): { adjusted: number; hasAdjustme
 }
 
 export function ReceivablesList({ receivables, bankAccounts = [] }: Props) {
+  const router = useRouter()
   const [selected, setSelected] = useState<Receivable | null>(null)
   const [negotiating, setNegotiating] = useState<Receivable | null>(null)
   const [newDialogOpen, setNewDialogOpen] = useState(false)
+  const [editing, setEditing] = useState<Receivable | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
   const today = new Date()
   today.setHours(0, 0, 0, 0)
+
+  async function handleDelete(id: string) {
+    setDeleting(true)
+    const result = await deleteReceivable(id)
+    setDeleting(false)
+    if (!result.success) {
+      toast.error(result.error)
+    } else {
+      toast.success("Conta excluída")
+      setConfirmDelete(null)
+      router.refresh()
+    }
+  }
 
   const totalPending = receivables
     .filter((r) => r.status === "PENDENTE")
@@ -223,6 +244,47 @@ export function ReceivablesList({ receivables, bankAccounts = [] }: Props) {
                     </button>
                   </div>
                 )}
+                {confirmDelete === rec.id ? (
+                  <div className="flex items-center justify-end gap-1 pt-1">
+                    <span className="text-xs text-muted-foreground">Excluir?</span>
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(rec.id)}
+                      disabled={deleting}
+                      className="text-red-500 hover:text-red-600"
+                      title="Confirmar exclusão"
+                    >
+                      <Check size={13} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmDelete(null)}
+                      className="text-muted-foreground hover:text-foreground"
+                      title="Cancelar"
+                    >
+                      <X size={13} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-end gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setEditing(rec)}
+                      className="text-muted-foreground hover:text-foreground"
+                      title="Editar"
+                    >
+                      <Pencil size={13} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmDelete(rec.id)}
+                      className="text-muted-foreground hover:text-red-500"
+                      title="Excluir"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           )
@@ -258,6 +320,15 @@ export function ReceivablesList({ receivables, bankAccounts = [] }: Props) {
       )}
 
       <NewAccountDialog open={newDialogOpen} onOpenChange={setNewDialogOpen} type="receivable" />
+
+      {editing && (
+        <EditAccountDialog
+          type="receivable"
+          item={editing}
+          open={!!editing}
+          onOpenChange={(v) => { if (!v) setEditing(null) }}
+        />
+      )}
     </div>
   )
 }

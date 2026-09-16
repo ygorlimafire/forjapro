@@ -566,6 +566,102 @@ export async function createPayable(data: unknown): Promise<ActionResult<void>> 
   }
 }
 
+// ─── Edit / Delete ────────────────────────────────────────────────────────────
+
+const updateReceivableSchema = z.object({
+  description: z.string().optional(),
+  amount: z.number().positive("Valor inválido"),
+  dueDate: z.string().min(1, "Data obrigatória"),
+  notes: z.string().optional(),
+})
+
+const updatePayableSchema = z.object({
+  description: z.string().optional(),
+  amount: z.number().positive("Valor inválido"),
+  dueDate: z.string().min(1, "Data obrigatória"),
+  categoryId: z.string().optional(),
+  notes: z.string().optional(),
+})
+
+export async function updateReceivable(id: string, data: unknown): Promise<ActionResult<void>> {
+  const session = await auth()
+  if (!session?.user) return { success: false, error: "Não autorizado" }
+  if (!can(session.user.permissions, "financeiro", "edit")) return { success: false, error: "Sem permissão" }
+
+  const parsed = updateReceivableSchema.safeParse(data)
+  if (!parsed.success) return { success: false, error: parsed.error.issues[0].message }
+
+  try {
+    await prisma.accountReceivable.update({
+      where: { id },
+      data: {
+        description: parsed.data.description || null,
+        amount: parsed.data.amount,
+        dueDate: new Date(parsed.data.dueDate + "T12:00:00"),
+        notes: parsed.data.notes || null,
+      },
+    })
+    revalidatePath("/financeiro")
+    return { success: true, data: undefined }
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : String(err) }
+  }
+}
+
+export async function deleteReceivable(id: string): Promise<ActionResult<void>> {
+  const session = await auth()
+  if (!session?.user) return { success: false, error: "Não autorizado" }
+  if (!can(session.user.permissions, "financeiro", "delete")) return { success: false, error: "Sem permissão" }
+
+  try {
+    await prisma.accountReceivable.delete({ where: { id } })
+    revalidatePath("/financeiro")
+    return { success: true, data: undefined }
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : String(err) }
+  }
+}
+
+export async function updatePayable(id: string, data: unknown): Promise<ActionResult<void>> {
+  const session = await auth()
+  if (!session?.user) return { success: false, error: "Não autorizado" }
+  if (!can(session.user.permissions, "financeiro", "edit")) return { success: false, error: "Sem permissão" }
+
+  const parsed = updatePayableSchema.safeParse(data)
+  if (!parsed.success) return { success: false, error: parsed.error.issues[0].message }
+
+  try {
+    await prisma.accountPayable.update({
+      where: { id },
+      data: {
+        description: parsed.data.description || null,
+        amount: parsed.data.amount,
+        dueDate: new Date(parsed.data.dueDate + "T12:00:00"),
+        categoryId: parsed.data.categoryId || null,
+        notes: parsed.data.notes || null,
+      },
+    })
+    revalidatePath("/financeiro")
+    return { success: true, data: undefined }
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : String(err) }
+  }
+}
+
+export async function deletePayable(id: string): Promise<ActionResult<void>> {
+  const session = await auth()
+  if (!session?.user) return { success: false, error: "Não autorizado" }
+  if (!can(session.user.permissions, "financeiro", "delete")) return { success: false, error: "Sem permissão" }
+
+  try {
+    await prisma.accountPayable.delete({ where: { id } })
+    revalidatePath("/financeiro")
+    return { success: true, data: undefined }
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : String(err) }
+  }
+}
+
 // ─── Cash flow transactions list ─────────────────────────────────────────────
 
 export async function getCashFlowTransactions(filters?: { from?: string; to?: string }) {
