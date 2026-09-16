@@ -560,6 +560,34 @@ export async function duplicateProposal(id: string): Promise<ActionResult<{ id: 
   }
 }
 
+export async function deleteProposal(id: string): Promise<ActionResult<void>> {
+  const session = await auth()
+  if (!session?.user) return { success: false, error: "Não autorizado" }
+  if (!can(session.user.permissions, "propostas", "delete")) {
+    return { success: false, error: "Sem permissão para excluir propostas" }
+  }
+
+  try {
+    const proposal = await prisma.salesProposal.findUnique({ where: { id, deletedAt: null } })
+    if (!proposal) return { success: false, error: "Proposta não encontrada" }
+
+    await prisma.salesProposal.update({ where: { id }, data: { deletedAt: new Date() } })
+
+    await createAuditLog({
+      userId: session.user.id,
+      action: "DELETE",
+      entity: "SalesProposal",
+      entityId: id,
+      oldData: { number: proposal.number, status: proposal.status },
+    })
+
+    revalidatePath("/propostas")
+    return { success: true, data: undefined }
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : String(err) }
+  }
+}
+
 export async function getProposals(filters?: {
   status?: string
   customerId?: string

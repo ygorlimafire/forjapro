@@ -1,8 +1,9 @@
 import { Metadata } from "next"
 import { auth } from "@/lib/auth"
 import { can } from "@/lib/rbac"
-import { getKanbanData } from "@/actions/crm"
+import { getKanbanData, getLeads } from "@/actions/crm"
 import { KanbanBoard } from "@/components/crm/kanban-board"
+import { LeadsList } from "@/components/crm/leads-list"
 import { Target } from "lucide-react"
 import { NewOpportunityDialog } from "@/components/crm/new-opportunity-dialog"
 import { getCustomers } from "@/actions/customers"
@@ -12,10 +13,11 @@ const mono: React.CSSProperties = { fontFamily: "'IBM Plex Mono', monospace" }
 export const metadata: Metadata = { title: "CRM — Funil de Vendas" }
 
 export default async function CRMPage() {
-  const [session, pipeline, customers] = await Promise.all([
+  const [session, pipeline, customers, leads] = await Promise.all([
     auth(),
     getKanbanData(),
     getCustomers(),
+    getLeads(),
   ])
   const canDelete = session?.user ? can(session.user.permissions, "crm", "delete") : false
 
@@ -64,6 +66,8 @@ export default async function CRMPage() {
         }))}
         canDelete={canDelete}
       />
+
+      <LeadsList leads={leads} canDelete={canDelete} />
     </div>
   )
 }

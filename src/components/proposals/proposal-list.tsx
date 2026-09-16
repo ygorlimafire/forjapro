@@ -2,9 +2,11 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { toast } from "sonner"
 import { StatusBadge } from "@/components/ui/status-badge"
 import { formatCurrency, formatDate } from "@/lib/utils"
-import { Eye, Edit, FileText } from "lucide-react"
+import { Eye, Edit, FileText, Trash2, Check, X } from "lucide-react"
+import { deleteProposal } from "@/actions/proposals"
 import type { ProposalStatus } from "@prisma/client"
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -38,6 +40,21 @@ export function ProposalList({ proposals }: { proposals: ProposalRow[] }) {
   const router = useRouter()
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState("")
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
+
+  async function handleDelete(id: string) {
+    setDeleting(true)
+    const result = await deleteProposal(id)
+    setDeleting(false)
+    if (!result.success) {
+      toast.error(result.error)
+    } else {
+      toast.success("Proposta excluída")
+      setConfirmDelete(null)
+      router.refresh()
+    }
+  }
 
   const filtered = proposals.filter((p) => {
     const customerName = p.customer.companyName || p.customer.tradeName || p.customer.document
@@ -138,17 +155,60 @@ export function ProposalList({ proposals }: { proposals: ProposalRow[] }) {
                   >
                     <Edit size={13} />
                   </button>
+                  {confirmDelete === p.id ? (
+                    <>
+                      <button
+                        onClick={() => handleDelete(p.id)}
+                        disabled={deleting}
+                        className="p-1.5 text-red-500 hover:text-red-600 transition-colors"
+                        title="Confirmar exclusão"
+                      >
+                        <Check size={13} />
+                      </button>
+                      <button
+                        onClick={() => setConfirmDelete(null)}
+                        className="p-1.5 text-[#9ba1a8] hover:text-[#16181c] transition-colors"
+                        title="Cancelar"
+                      >
+                        <X size={13} />
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={() => setConfirmDelete(p.id)}
+                      className="p-1.5 text-[#9ba1a8] hover:text-red-500 transition-colors"
+                      title="Excluir"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  )}
                 </div>
               </div>
 
               {/* Mobile */}
               <div
-                className="md:hidden px-4 py-3.5 cursor-pointer hover:bg-[#f5f6f7] transition-colors"
+                className="md:hidden px-4 py-3.5 hover:bg-[#f5f6f7] transition-colors"
                 onClick={() => router.push(`/propostas/${p.id}`)}
               >
                 <div className="flex items-center justify-between gap-2 mb-1">
                   <span className="font-semibold text-[14px] text-[#16181c] truncate">{customerName}</span>
-                  <StatusBadge status={p.status} />
+                  <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                    <StatusBadge status={p.status} />
+                    {confirmDelete === p.id ? (
+                      <>
+                        <button onClick={() => handleDelete(p.id)} disabled={deleting} className="text-red-500">
+                          <Check size={13} />
+                        </button>
+                        <button onClick={() => setConfirmDelete(null)} className="text-[#9ba1a8]">
+                          <X size={13} />
+                        </button>
+                      </>
+                    ) : (
+                      <button onClick={() => setConfirmDelete(p.id)} className="text-[#9ba1a8] hover:text-red-500">
+                        <Trash2 size={13} />
+                      </button>
+                    )}
+                  </div>
                 </div>
                 <p style={mono} className="text-[11px] text-[#9ba1a8]">
                   {p.number} · {formatCurrency(Number(p.totalAmount))} · {formatDate(p.createdAt)}
