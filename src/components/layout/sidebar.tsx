@@ -23,6 +23,7 @@ import {
   LogOut,
 } from "lucide-react"
 import { getInitials } from "@/lib/utils"
+import { company } from "@/config/company"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { handleSignOut } from "@/actions/auth"
 
@@ -127,8 +128,8 @@ function Logo({ collapsed }: { collapsed: boolean }) {
         </div>
       ) : (
         <Image
-          src="/logo/FORJA%20BRANCO%20SEM%20FUNDO-%20Editado.png"
-          alt="Forja Pro"
+          src={company.logoDark}
+          alt={company.name}
           width={120}
           height={40}
           className="object-contain"

@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import localFont from "next/font/local"
 import { Toaster } from "@/components/ui/sonner"
+import { company } from "@/config/company"
 import "./globals.css"
 
 const barlowCondensed = localFont({
@@ -37,10 +38,10 @@ const ibmPlexMono = localFont({
 
 export const metadata: Metadata = {
   title: {
-    default: "FORJA PRO",
-    template: "%s | FORJA PRO",
+    default: company.name,
+    template: `%s | ${company.name}`,
   },
-  description: "Sistema de gestão comercial — FORJA PRO",
+  description: `${company.slogan} — ${company.name}`,
 }
 
 export default function RootLayout({

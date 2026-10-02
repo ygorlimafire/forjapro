@@ -1,10 +1,11 @@
 import { PrismaClient, CustomerType, LeadSource, LeadStatus, ActivityType, SupplierType, ExpenseCategoryType } from "@prisma/client"
 import bcrypt from "bcryptjs"
+import { company } from "../src/config/company"
 
 const prisma = new PrismaClient()
 
 async function main() {
-  console.log("🌱 Iniciando seed da FORJA PRO...")
+  console.log(`🌱 Iniciando seed — ${company.name}...`)
 
   // ── Permissões ────────────────────────────────────────────────────────────
   const modules = ["dashboard","crm","clientes","propostas","pedidos","produtos","estoque","compras","financeiro","relatorios","configuracoes"]
@@ -110,52 +111,52 @@ async function main() {
   console.log("  ✓ 5 perfis criados com permissões")
 
   // ── Usuário Admin ─────────────────────────────────────────────────────────
-  const adminPassword = await bcrypt.hash("forjapro@2025", 12)
+  const adminPassword = await bcrypt.hash(company.seed.adminPassword, 12)
   const admin = await prisma.user.upsert({
-    where: { email: "admin@forjapro.com.br" },
+    where: { email: company.seed.adminEmail },
     update: {},
     create: {
-      name: "Administrador FORJA PRO",
-      email: "admin@forjapro.com.br",
+      name: company.seed.adminName,
+      email: company.seed.adminEmail,
       password: adminPassword,
       roleId: roles["ADMIN"],
       isActive: true,
     },
   })
-  console.log("  ✓ Usuário admin: admin@forjapro.com.br / forjapro@2025")
+  console.log(`  ✓ Usuário admin: ${company.seed.adminEmail} / ${company.seed.adminPassword}`)
 
   // Usuário vendedor de exemplo
-  const vendedorPassword = await bcrypt.hash("vendedor123", 12)
+  const vendedorPassword = await bcrypt.hash(company.seed.vendedorPassword, 12)
   const vendedor = await prisma.user.upsert({
-    where: { email: "carlos@forjapro.com.br" },
+    where: { email: company.seed.vendedorEmail },
     update: {},
     create: {
-      name: "Carlos Andrade",
-      email: "carlos@forjapro.com.br",
+      name: company.seed.vendedorName,
+      email: company.seed.vendedorEmail,
       password: vendedorPassword,
       roleId: roles["VENDEDOR"],
       isActive: true,
     },
   })
-  console.log("  ✓ Usuário vendedor: carlos@forjapro.com.br / vendedor123")
+  console.log(`  ✓ Usuário vendedor: ${company.seed.vendedorEmail} / ${company.seed.vendedorPassword}`)
 
   // ── Configurações da empresa ──────────────────────────────────────────────
   await prisma.companySettings.upsert({
-    where: { id: "forjapro-settings" },
+    where: { id: company.seed.settingsId },
     update: {},
     create: {
-      id: "forjapro-settings",
-      name: "FORJA PRO Equipamentos",
-      cnpj: "12.345.678/0001-90",
-      street: "Rua das Indústrias",
-      number: "1200",
-      neighborhood: "Distrito Industrial",
-      city: "São Paulo",
-      state: "SP",
-      zipCode: "04321-000",
-      phone: "(11) 3456-7890",
-      email: "contato@forjapro.com.br",
-      website: "www.forjapro.com.br",
+      id: company.seed.settingsId,
+      name: company.fullName,
+      cnpj: company.seed.companyCnpj,
+      street: company.seed.companyStreet,
+      number: company.seed.companyNumber,
+      neighborhood: company.seed.companyNeighborhood,
+      city: company.seed.companyCity,
+      state: company.seed.companyState,
+      zipCode: company.seed.companyZipCode,
+      phone: company.seed.companyPhone,
+      email: company.seed.companyEmail,
+      website: company.seed.companyWebsite,
       proposalSequence: 0,
       purchaseSequence: 0,
       minMarginPct: 15,
@@ -166,7 +167,7 @@ async function main() {
 
   // ── Fornecedor principal: TRAMA ───────────────────────────────────────────
   await prisma.supplier.upsert({
-    where: { id: "supplier-trama" },
+    where: { id: "supplier-principal" },
     update: {
       type: SupplierType.PRODUTO,
       country: "BR",
@@ -175,22 +176,22 @@ async function main() {
       commercialTerms: "Pagamento: 28 dias após a NF. Frete: CIF para pedidos acima de R$ 5.000.",
     },
     create: {
-      id: "supplier-trama",
+      id: "supplier-principal",
       type: SupplierType.PRODUTO,
-      companyName: "Trama Equipamentos Industriais Ltda",
-      tradeName: "Trama",
+      companyName: company.seed.supplierName,
+      tradeName: company.seed.supplierTradeName,
       document: "00.000.000/0001-00",
       country: "BR",
       currency: "BRL",
-      contactName: "Comercial Trama",
-      phone: "(11) 9999-0000",
-      email: "comercial@trama.com.br",
+      contactName: `Comercial ${company.seed.supplierTradeName}`,
+      phone: company.seed.supplierPhone,
+      email: company.seed.supplierEmail,
       avgLeadDays: 30,
       commercialTerms: "Pagamento: 28 dias após a NF. Frete: CIF para pedidos acima de R$ 5.000.",
       isActive: true,
     },
   })
-  console.log("  ✓ Fornecedor Trama cadastrado")
+  console.log(`  ✓ Fornecedor ${company.seed.supplierTradeName} cadastrado`)
 
   // ── Categorias de despesa padrão ──────────────────────────────────────────
   const expenseCategories = [
@@ -254,8 +255,8 @@ async function main() {
     },
     {
       key: "5.0",
-      title: "Garantia FORJA PRO",
-      content: "A FORJA PRO oferece garantia de 12 (doze) meses contra defeitos de fabricação a partir da data de entrega/instalação, conforme Código de Defesa do Consumidor. A garantia não cobre: mau uso, instalação incorreta por terceiros, negligência, acidentes, desgaste natural ou ausência de manutenção preventiva.",
+      title: `Garantia ${company.name}`,
+      content: `A ${company.name} oferece garantia de 12 (doze) meses contra defeitos de fabricação a partir da data de entrega/instalação, conforme Código de Defesa do Consumidor. A garantia não cobre: mau uso, instalação incorreta por terceiros, negligência, acidentes, desgaste natural ou ausência de manutenção preventiva.`,
       order: 7,
     },
     {
@@ -266,8 +267,8 @@ async function main() {
     },
     {
       key: "7.0",
-      title: "Obrigações da FORJA PRO",
-      content: "A FORJA PRO compromete-se a: (a) fornecer os equipamentos nas especificações descritas neste orçamento; (b) cumprir os prazos acordados, salvo força maior devidamente comunicada; (c) prestar assistência técnica no período de garantia; (d) emitir nota fiscal para todos os produtos fornecidos.",
+      title: `Obrigações da ${company.name}`,
+      content: `A ${company.name} compromete-se a: (a) fornecer os equipamentos nas especificações descritas neste orçamento; (b) cumprir os prazos acordados, salvo força maior devidamente comunicada; (c) prestar assistência técnica no período de garantia; (d) emitir nota fiscal para todos os produtos fornecidos.`,
       order: 9,
     },
     {
@@ -316,7 +317,7 @@ async function main() {
   })
   console.log(`  ✓ ${categoriesData.length} categorias de produtos`)
 
-  // ── Produtos de exemplo (catálogo FORJA PRO) ───────��──────────────────
+  // ── Produtos de exemplo ───────────────────────────────────────────────────
   const productsData = [
     {
       sku: "FP-FOG-001",
@@ -556,7 +557,7 @@ async function main() {
     update: {},
     create: {
       id: "pipeline-principal",
-      name: "Funil Comercial FORJA PRO",
+      name: company.seed.pipelineName,
       isActive: true,
     },
   })
@@ -753,8 +754,8 @@ async function main() {
 
   console.log("\n✅ Seed concluído com sucesso!")
   console.log("\n📋 Credenciais de acesso:")
-  console.log("   Admin:    admin@forjapro.com.br  /  forjapro@2025")
-  console.log("   Vendedor: carlos@forjapro.com.br /  vendedor123")
+  console.log(`   Admin:    ${company.seed.adminEmail}  /  ${company.seed.adminPassword}`)
+  console.log(`   Vendedor: ${company.seed.vendedorEmail} /  ${company.seed.vendedorPassword}`)
 }
 
 main()

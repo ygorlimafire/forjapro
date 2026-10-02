@@ -5,8 +5,9 @@ import { ProposalForm } from "@/components/proposals/proposal-form"
 import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import type { PageProps } from "@/types"
+import { company } from "@/config/company"
 
-export const metadata = { title: "Editar Proposta — FORJA PRO" }
+export const metadata = { title: `Editar Proposta — ${company.name}` }
 
 export default async function EditarPropostaPage({ params }: PageProps) {
   const { id } = await params

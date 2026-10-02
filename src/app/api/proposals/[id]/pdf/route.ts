@@ -6,8 +6,9 @@ import { renderToBuffer } from "@react-pdf/renderer"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { ProposalPDF, type ProposalPDFData, type CompanyPDFData, type TermPDFData } from "@/components/proposals/proposal-pdf"
+import { company } from "@/config/company"
 
-const BRAND_LOGO_PATH = path.join(process.cwd(), "public/logo/FORJA BRANCO SEM FUNDO- Editado.png")
+const BRAND_LOGO_PATH = path.join(process.cwd(), "public/logo", company.logoFilename)
 
 export const dynamic = "force-dynamic"
 
@@ -94,7 +95,7 @@ export async function GET(
   const brandLogo = settings?.logo ?? (fs.existsSync(BRAND_LOGO_PATH) ? BRAND_LOGO_PATH : null)
 
   const companyData: CompanyPDFData = {
-    name: settings?.name ?? "FORJA PRO",
+    name: settings?.name ?? company.name,
     cnpj: settings?.cnpj ?? null,
     logo: brandLogo,
     phone: settings?.phone ?? null,

@@ -3,8 +3,9 @@ import { prisma } from "@/lib/prisma"
 import { ProposalForm } from "@/components/proposals/proposal-form"
 import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
+import { company } from "@/config/company"
 
-export const metadata = { title: "Nova Proposta — FORJA PRO" }
+export const metadata = { title: `Nova Proposta — ${company.name}` }
 
 export default async function NovaPropostaPage() {
   const [customers, settings, opportunities] = await Promise.all([

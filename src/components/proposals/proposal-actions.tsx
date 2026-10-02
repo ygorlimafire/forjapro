@@ -12,6 +12,7 @@ import {
   sendProposal,
   duplicateProposal,
 } from "@/actions/proposals"
+import { company } from "@/config/company"
 import {
   CheckCircle2,
   XCircle,
@@ -82,7 +83,7 @@ export function ProposalActions({
   }
 
   const whatsappText = encodeURIComponent(
-    `Olá! Segue a proposta comercial FORJA PRO nº ${proposalNumber} no valor de R$ ${totalAmount.toFixed(2)}. Em anexo o documento completo.`
+    `Olá! Segue a proposta comercial ${company.name} nº ${proposalNumber} no valor de R$ ${totalAmount.toFixed(2)}. Em anexo o documento completo.`
   )
   const whatsappPhone = customerPhone?.replace(/\D/g, "") || ""
   const whatsappUrl = whatsappPhone

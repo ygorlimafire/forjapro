@@ -12,6 +12,7 @@ import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Eye, EyeOff, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { company } from "@/config/company"
 
 const schema = z.object({
   email: z.string().email("E-mail inválido"),
@@ -77,8 +78,8 @@ export function LoginForm() {
       {/* Logo mark */}
       <div className="mb-9">
         <Image
-          src="/logo/FORJA%20BRANCO%20SEM%20FUNDO-%20Editado.png"
-          alt="Forja Pro"
+          src={company.logoDark}
+          alt={company.name}
           width={180}
           height={60}
           className="object-contain"
@@ -88,7 +89,7 @@ export function LoginForm() {
 
       {/* Eyebrow */}
       <p className="font-mono text-[11px] text-[#9ba1a8] tracking-[0.08em] uppercase mb-1">
-        Sistema de Gestão Comercial
+        {company.slogan}
       </p>
 
       {/* Heading */}
@@ -109,7 +110,7 @@ export function LoginForm() {
           <input
             id="email"
             type="email"
-            placeholder="nome@forjapro.com.br"
+            placeholder={`nome@${company.domain}`}
             autoComplete="email"
             disabled={loading}
             className={darkInput}

@@ -1,8 +1,9 @@
 import { getProposals } from "@/actions/proposals"
 import { ProposalList } from "@/components/proposals/proposal-list"
 import Link from "next/link"
+import { company } from "@/config/company"
 
-export const metadata = { title: "Propostas — FORJA PRO" }
+export const metadata = { title: `Propostas — ${company.name}` }
 
 const mono: React.CSSProperties = { fontFamily: "'IBM Plex Mono', monospace" }
 
