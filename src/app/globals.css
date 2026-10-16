@@ -44,9 +44,17 @@
   --color-chart-5: var(--chart-5);
 
   /* ── FORJA PRO brand tokens (Tailwind utilities: bg-copper-600, text-ink-900, etc.) ── */
+  --color-copper-50:  var(--copper-50);
+  --color-copper-100: var(--copper-100);
+  --color-copper-200: var(--copper-200);
+  --color-copper-300: var(--copper-300);
+  --color-copper-400: var(--copper-400);
+  --color-copper-500: var(--copper-500);
   --color-copper-600: var(--copper-600);
   --color-copper-700: var(--copper-700);
-  --color-copper-100: var(--copper-100);
+  --color-copper-800: var(--copper-800);
+  --color-copper-900: var(--copper-900);
+  --color-brand-foreground: var(--brand-foreground);
   --color-ink-900: var(--ink-900);
   --color-ink-800: var(--ink-800);
   --color-steel-600: var(--steel-600);
@@ -96,7 +104,7 @@
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.12 0.004 265);
   --primary: oklch(0.55 0.12 46);               /* copper-600 #b5652f */
-  --primary-foreground: oklch(1 0 0);
+  --primary-foreground: var(--brand-foreground, oklch(1 0 0));
   --secondary: oklch(0.94 0.002 255);           /* steel-100 #eceef0 */
   --secondary-foreground: oklch(0.12 0.004 265);
   --muted: oklch(0.94 0.002 255);               /* steel-100 */
@@ -109,11 +117,21 @@
   --ring: oklch(0.55 0.12 46);                 /* copper-600 */
   --radius: 0px;                               /* zero-radius system */
 
-  /* ── brand raw hex tokens ── */
-  --brand: #b5652f;                      /* overridden by layout.tsx from company_settings.primary_color */
-  --copper-600: var(--brand, #b5652f);   /* all brand-color usage chains through here */
-  --copper-700: color-mix(in srgb, var(--brand, #b5652f) 80%, black);
+  /* ── brand tokens: --brand + --brand-foreground injected by layout.tsx ── */
+  --brand: #b5652f;
+  --brand-foreground: #ffffff;           /* white or black per WCAG contrast, computed in layout.tsx */
+
+  /* ── full copper scale derived from --brand via color-mix() ── */
+  --copper-50:  color-mix(in srgb, var(--brand, #b5652f)  5%, white);
   --copper-100: color-mix(in srgb, var(--brand, #b5652f) 15%, white);
+  --copper-200: color-mix(in srgb, var(--brand, #b5652f) 30%, white);
+  --copper-300: color-mix(in srgb, var(--brand, #b5652f) 45%, white);
+  --copper-400: color-mix(in srgb, var(--brand, #b5652f) 65%, white);
+  --copper-500: color-mix(in srgb, var(--brand, #b5652f) 80%, white);
+  --copper-600: var(--brand, #b5652f);   /* canonical brand color */
+  --copper-700: color-mix(in srgb, var(--brand, #b5652f) 80%, black);
+  --copper-800: color-mix(in srgb, var(--brand, #b5652f) 60%, black);
+  --copper-900: color-mix(in srgb, var(--brand, #b5652f) 40%, black);
   --ink-900: #16181c;
   --ink-800: #21242a;
   --steel-600: #6b7178;
@@ -171,6 +189,7 @@
   .btn-clip {
     position: relative;
     isolation: isolate; /* scope ::before z-index within button's stacking context */
+    color: var(--brand-foreground, #ffffff); /* WCAG-computed contrast color, overrides text-white */
   }
   .btn-clip::before {
     content: '';

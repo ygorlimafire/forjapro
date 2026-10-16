@@ -74,6 +74,7 @@ export async function saveCompanyBranding(data: unknown): Promise<ActionResult<v
 export async function completeOnboarding(): Promise<ActionResult<void>> {
   const session = await auth()
   if (!session?.user) return { success: false, error: "Não autorizado" }
+  if (session.user.roleName !== "ADMIN") return { success: false, error: "Sem permissão" }
 
   const existing = await prisma.companySettings.findFirst()
   if (!existing) return { success: false, error: "Configurações não encontradas" }

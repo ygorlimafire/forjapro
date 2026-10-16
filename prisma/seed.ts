@@ -121,6 +121,7 @@ async function main() {
       password: adminPassword,
       roleId: roles["ADMIN"],
       isActive: true,
+      emailVerified: new Date(),
     },
   })
   console.log(`  ✓ Usuário admin: ${company.seed.adminEmail} / ${company.seed.adminPassword}`)

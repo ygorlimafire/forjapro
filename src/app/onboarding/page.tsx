@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { saveCompanyBranding } from "@/actions/company-settings"
+import { company } from "@/config/company"
 
 const mono: React.CSSProperties = { fontFamily: "'IBM Plex Mono', monospace" }
 const display: React.CSSProperties = { fontFamily: "'Barlow Condensed', sans-serif" }
@@ -73,7 +74,7 @@ export default function OnboardingStep1() {
     const result = await saveCompanyBranding({
       ...form,
       logo: logoUrl || "",
-      primaryColor: "#b5652f",
+      primaryColor: company.brandColor,
     })
     setSaving(false)
     if (!result.success) {

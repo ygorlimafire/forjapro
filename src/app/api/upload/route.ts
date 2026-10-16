@@ -6,7 +6,9 @@ export const dynamic = "force-dynamic"
 export const maxDuration = 30 // seconds — Vercel default is 10s on hobby, insufficient for larger uploads
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif", "application/pdf"]
+const BRANDING_ALLOWED_TYPES = ["image/jpeg", "image/png", "image/svg+xml"]
 const MAX_SIZE = 10 * 1024 * 1024 // 10MB
+const BRANDING_MAX_SIZE = 2 * 1024 * 1024 // 2MB
 const MAX_RETRIES = 2
 
 async function uploadWithRetry(
@@ -55,14 +57,27 @@ export async function POST(request: NextRequest) {
     const bucket = (formData.get("bucket") as string) || "products"
     const folder = (formData.get("folder") as string) || "images"
 
+    // Branding bucket: ADMIN-only, restricted MIME types and size
+    if (bucket === "branding") {
+      if (session.user.roleName !== "ADMIN") {
+        return NextResponse.json({ error: "Sem permissão" }, { status: 403 })
+      }
+    }
+
     if (!file) {
       return NextResponse.json({ error: "Nenhum arquivo enviado" }, { status: 400 })
     }
-    if (!ALLOWED_TYPES.includes(file.type)) {
-      return NextResponse.json({ error: "Formato não suportado. Use JPG, PNG, WEBP ou PDF." }, { status: 400 })
+
+    const allowedTypes = bucket === "branding" ? BRANDING_ALLOWED_TYPES : ALLOWED_TYPES
+    const maxSize = bucket === "branding" ? BRANDING_MAX_SIZE : MAX_SIZE
+
+    if (!allowedTypes.includes(file.type)) {
+      const formats = bucket === "branding" ? "JPG, PNG ou SVG" : "JPG, PNG, WEBP ou PDF"
+      return NextResponse.json({ error: `Formato não suportado. Use ${formats}.` }, { status: 400 })
     }
-    if (file.size > MAX_SIZE) {
-      return NextResponse.json({ error: "Arquivo muito grande. Máximo 10MB." }, { status: 400 })
+    if (file.size > maxSize) {
+      const limit = bucket === "branding" ? "2MB" : "10MB"
+      return NextResponse.json({ error: `Arquivo muito grande. Máximo ${limit}.` }, { status: 400 })
     }
 
     const ext = file.name.split(".").pop()?.toLowerCase() || "jpg"

@@ -35,15 +35,22 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         if (!dbUser || !dbUser.password || !dbUser.isActive) return null
 
-        // Bootstrap: if ADMIN_EMAIL env var matches this login, promote to ADMIN role
+        // Bootstrap: promote to ADMIN once if ADMIN_EMAIL matches, email is confirmed,
+        // and no other active ADMIN exists yet (one-time idempotent operation).
         if (process.env.ADMIN_EMAIL && dbUser.email === process.env.ADMIN_EMAIL) {
           const adminRole = await prisma.role.findFirst({
             where: { name: "ADMIN" },
             include: { permissions: { include: { permission: true } } },
           })
           if (adminRole && dbUser.roleId !== adminRole.id) {
-            await prisma.user.update({ where: { id: dbUser.id }, data: { roleId: adminRole.id } })
-            dbUser = { ...dbUser, roleId: adminRole.id, role: adminRole }
+            const emailConfirmed = dbUser.emailVerified !== null
+            const adminAlreadyExists = await prisma.user.count({
+              where: { role: { name: "ADMIN" }, isActive: true, deletedAt: null },
+            }) > 0
+            if (emailConfirmed && !adminAlreadyExists) {
+              await prisma.user.update({ where: { id: dbUser.id }, data: { roleId: adminRole.id } })
+              dbUser = { ...dbUser, roleId: adminRole.id, role: adminRole }
+            }
           }
         }
 
