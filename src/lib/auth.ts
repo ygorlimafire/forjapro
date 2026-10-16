@@ -20,7 +20,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const parsed = loginSchema.safeParse(credentials)
         if (!parsed.success) return null
 
-        const user = await prisma.user.findUnique({
+        let dbUser = await prisma.user.findUnique({
           where: { email: parsed.data.email, deletedAt: null },
           include: {
             role: {
@@ -33,28 +33,40 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           },
         })
 
-        if (!user || !user.password || !user.isActive) return null
+        if (!dbUser || !dbUser.password || !dbUser.isActive) return null
 
-        const valid = await bcrypt.compare(parsed.data.password, user.password)
+        // Bootstrap: if ADMIN_EMAIL env var matches this login, promote to ADMIN role
+        if (process.env.ADMIN_EMAIL && dbUser.email === process.env.ADMIN_EMAIL) {
+          const adminRole = await prisma.role.findFirst({
+            where: { name: "ADMIN" },
+            include: { permissions: { include: { permission: true } } },
+          })
+          if (adminRole && dbUser.roleId !== adminRole.id) {
+            await prisma.user.update({ where: { id: dbUser.id }, data: { roleId: adminRole.id } })
+            dbUser = { ...dbUser, roleId: adminRole.id, role: adminRole }
+          }
+        }
+
+        const valid = await bcrypt.compare(parsed.data.password, dbUser.password!)
         if (!valid) return null
 
         await prisma.auditLog.create({
           data: {
-            userId: user.id,
+            userId: dbUser.id,
             action: "LOGIN",
             entity: "User",
-            entityId: user.id,
+            entityId: dbUser.id,
           },
         })
 
         return {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          image: user.image,
-          roleId: user.roleId,
-          roleName: user.role.name,
-          permissions: user.role.permissions.map(
+          id: dbUser.id,
+          name: dbUser.name,
+          email: dbUser.email,
+          image: dbUser.image,
+          roleId: dbUser.roleId,
+          roleName: dbUser.role.name,
+          permissions: dbUser.role.permissions.map(
             (rp) => `${rp.permission.module}:${rp.permission.action}`
           ),
         }

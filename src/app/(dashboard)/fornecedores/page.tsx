@@ -73,7 +73,7 @@ export default async function FornecedoresPage({ searchParams }: { searchParams:
               "inline-flex items-center px-3.5 py-1.5 text-[12px] font-semibold transition-colors",
               (typeFilter ?? "") === t.value
                 ? "bg-[#16181c] text-white"
-                : "border border-[#dde0e3] text-[#6b7178] hover:border-[#b5652f] hover:text-[#16181c]"
+                : "border border-[#dde0e3] text-[#6b7178] hover:border-[--copper-600] hover:text-[#16181c]"
             )}>
               {t.label}
             </span>
@@ -123,7 +123,7 @@ export default async function FornecedoresPage({ searchParams }: { searchParams:
                   className="hidden sm:grid items-center px-4 py-3.5 text-[14px] hover:bg-[#f5f6f7] transition-colors"
                   style={{ gridTemplateColumns: "2fr 1fr 1.2fr 1fr 0.7fr" }}
                 >
-                  <div className="font-semibold text-[#16181c] truncate pr-3 group-hover:text-[#b5652f]">
+                  <div className="font-semibold text-[#16181c] truncate pr-3 group-hover:text-[--copper-600]">
                     {name}
                     {s.tradeName && s.companyName && s.tradeName !== s.companyName && (
                       <span className="block text-[12px] font-normal text-[#6b7178]">{s.companyName}</span>

@@ -20,7 +20,7 @@ const STATUS_COLOR: Record<LeadStatus, string> = {
   NOVO: "#6b7178",
   CONTATO: "#3b82f6",
   QUALIFICADO: "#16a34a",
-  CONVERTIDO: "#b5652f",
+  CONVERTIDO: "var(--copper-600)",
   DESCARTADO: "#9ca3af",
 }
 

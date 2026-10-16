@@ -75,7 +75,7 @@ export function ProposalList({ proposals }: { proposals: ProposalRow[] }) {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Buscar por nº, cliente ou vendedor..."
-          className="flex-1 min-w-[200px] max-w-[280px] px-3 py-2 bg-[#f5f6f7] border border-[#dde0e3] text-[13px] text-[#21242a] placeholder:text-[#9ba1a8] outline-none focus:border-[#b5652f] transition-colors"
+          className="flex-1 min-w-[200px] max-w-[280px] px-3 py-2 bg-[#f5f6f7] border border-[#dde0e3] text-[13px] text-[#21242a] placeholder:text-[#9ba1a8] outline-none focus:border-[--copper-600] transition-colors"
         />
         <div className="flex flex-wrap gap-1.5">
           {STATUS_OPTIONS.map((s) => (
@@ -85,7 +85,7 @@ export function ProposalList({ proposals }: { proposals: ProposalRow[] }) {
               className={
                 statusFilter === s.value
                   ? "px-3 py-1.5 text-[12px] font-semibold bg-[#16181c] text-white transition-colors"
-                  : "px-3 py-1.5 text-[12px] font-semibold border border-[#dde0e3] text-[#6b7178] hover:border-[#b5652f] hover:text-[#16181c] transition-colors"
+                  : "px-3 py-1.5 text-[12px] font-semibold border border-[#dde0e3] text-[#6b7178] hover:border-[--copper-600] hover:text-[#16181c] transition-colors"
               }
             >
               {s.label}

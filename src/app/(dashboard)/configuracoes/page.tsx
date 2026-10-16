@@ -3,10 +3,13 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { redirect } from "next/navigation"
 import { can } from "@/lib/rbac"
+import Link from "next/link"
 import { UsersSection } from "@/components/configuracoes/users-section"
 import { ExpenseCategoriesPanel } from "@/components/financial/expense-categories-panel"
 import { ProductCategoriesPanel } from "@/components/products/product-categories-panel"
 import { getAllCategories } from "@/actions/products"
+import { getCompanySettings } from "@/lib/company-settings"
+import { Building2 } from "lucide-react"
 
 export const metadata: Metadata = { title: "Configurações" }
 
@@ -34,7 +37,7 @@ export default async function ConfiguracoesPage() {
     redirect("/dashboard")
   }
 
-  const [users, roles, expenseCategories, productCategories] = await Promise.all([
+  const [users, roles, expenseCategories, productCategories, companySettings] = await Promise.all([
     prisma.user.findMany({
       where: { deletedAt: null },
       include: { role: true },
@@ -46,6 +49,7 @@ export default async function ConfiguracoesPage() {
     }),
     prisma.expenseCategory.findMany({ orderBy: [{ isActive: "desc" }, { name: "asc" }] }),
     getAllCategories(),
+    getCompanySettings(),
   ])
 
   return (
@@ -59,6 +63,36 @@ export default async function ConfiguracoesPage() {
           Configurações
         </h1>
       </div>
+
+      {/* ── Empresa ── */}
+      {can(session.user.permissions, "configuracoes", "edit") && (
+        <div className="bg-white border border-[#dde0e3] p-[22px]">
+          <SectionTitle>Empresa</SectionTitle>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-[#f5f6f7] border border-[#dde0e3] flex items-center justify-center">
+                {companySettings.logo ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={companySettings.logo} alt="logo" className="w-6 h-6 object-contain" />
+                ) : (
+                  <Building2 size={16} className="text-[#6b7178]" />
+                )}
+              </div>
+              <div>
+                <p className="font-semibold text-[14px] text-[#16181c]">{companySettings.name}</p>
+                {companySettings.slogan && (
+                  <p style={{ ...mono, fontSize: "11px", color: "#9ba1a8" }}>{companySettings.slogan}</p>
+                )}
+              </div>
+            </div>
+            <Link href="/configuracoes/empresa"
+              className="btn-clip px-4 py-2 text-white text-[13px]"
+              style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 600, letterSpacing: "0.04em", textTransform: "uppercase" }}>
+              Editar
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* ── Usuários ── */}
       <div className="bg-white border border-[#dde0e3] p-[22px]">

@@ -43,7 +43,7 @@ export default async function ComprasPage({ searchParams }: PageProps) {
       "inline-flex items-center px-3.5 py-1.5 text-[12px] font-semibold transition-colors",
       active
         ? "bg-[#16181c] text-white"
-        : "border border-[#dde0e3] text-[#6b7178] hover:border-[#b5652f] hover:text-[#16181c]"
+        : "border border-[#dde0e3] text-[#6b7178] hover:border-[--copper-600] hover:text-[#16181c]"
     )
   }
 
@@ -62,7 +62,7 @@ export default async function ComprasPage({ searchParams }: PageProps) {
         <div className="flex gap-2 items-center">
           <Link
             href="/compras/sugeridas"
-            className="inline-flex items-center gap-1.5 px-4 py-2 border border-[#dde0e3] font-display font-bold text-[13px] uppercase tracking-[0.02em] text-[#6b7178] hover:border-[#b5652f] hover:text-[#16181c] transition-colors"
+            className="inline-flex items-center gap-1.5 px-4 py-2 border border-[#dde0e3] font-display font-bold text-[13px] uppercase tracking-[0.02em] text-[#6b7178] hover:border-[--copper-600] hover:text-[#16181c] transition-colors"
           >
             <AlertTriangle size={13} />
             Sugeridas

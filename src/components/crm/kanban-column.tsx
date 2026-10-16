@@ -65,7 +65,7 @@ export function KanbanColumn({ stage, isDragging, onCardClick }: KanbanColumnPro
           </span>
         </div>
         {totalValue > 0 && (
-          <p style={{ ...mono, fontSize: "12px", color: "#b5652f", marginTop: "2px" }}>
+          <p style={{ ...mono, fontSize: "12px", color: "var(--copper-600)", marginTop: "2px" }}>
             {formatCurrency(totalValue)}
           </p>
         )}

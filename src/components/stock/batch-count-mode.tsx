@@ -144,7 +144,7 @@ export function BatchCountMode({ items, onDone }: BatchCountModeProps) {
 
       {/* ── Instruction banner ── */}
       <div
-        className="mb-4 px-4 py-3 border border-[#b5652f]/30 bg-[#b5652f]/5"
+        className="mb-4 px-4 py-3 border border-[--copper-600]/30 bg-[--copper-600]/5"
         style={mono}
       >
         <p style={{ fontSize: "11px", color: "#8a4f24" }}>

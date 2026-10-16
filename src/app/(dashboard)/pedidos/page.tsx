@@ -45,7 +45,7 @@ export default async function PedidosPage({ searchParams }: PageProps) {
       "inline-flex items-center gap-1.5 px-3.5 py-1.5 text-[12px] font-semibold transition-colors",
       active
         ? "bg-[#16181c] text-white"
-        : "border border-[#dde0e3] text-[#6b7178] hover:border-[#b5652f] hover:text-[#16181c]"
+        : "border border-[#dde0e3] text-[#6b7178] hover:border-[--copper-600] hover:text-[#16181c]"
     )
   }
 

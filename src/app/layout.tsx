@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import localFont from "next/font/local"
 import { Toaster } from "@/components/ui/sonner"
-import { company } from "@/config/company"
+import { getCompanySettings } from "@/lib/company-settings"
 import "./globals.css"
 
 const barlowCondensed = localFont({
@@ -36,25 +36,26 @@ const ibmPlexMono = localFont({
   display: "swap",
 })
 
-export const metadata: Metadata = {
-  title: {
-    default: company.name,
-    template: `%s | ${company.name}`,
-  },
-  description: `${company.slogan} — ${company.name}`,
+export async function generateMetadata(): Promise<Metadata> {
+  const s = await getCompanySettings()
+  return {
+    title: { default: s.name, template: `%s | ${s.name}` },
+    description: `${s.slogan ?? "Sistema de Gestão Comercial"} — ${s.name}`,
+  }
 }
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const s = await getCompanySettings()
+
   return (
     <html
       lang="pt-BR"
       className={`${barlowCondensed.variable} ${ibmPlexSans.variable} ${ibmPlexMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
+      <body
+        className="min-h-full flex flex-col"
+        style={{ ["--brand" as string]: s.primaryColor }}
+      >
         {children}
         <Toaster position="top-right" richColors />
       </body>

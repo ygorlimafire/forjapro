@@ -158,7 +158,7 @@ function KpiCard({
   href?: string
 }) {
   const inner = (
-    <div className="bg-white border border-[#dde0e3] p-4 h-full transition-colors hover:border-[#b5652f]/40">
+    <div className="bg-white border border-[#dde0e3] p-4 h-full transition-colors hover:border-[--copper-600]/40">
       <p
         style={{
           fontFamily: "'IBM Plex Mono', monospace",
@@ -377,7 +377,7 @@ export default async function DashboardPage() {
                       </div>
                       <div className="flex-1 h-[22px] bg-[#eceef0] relative overflow-hidden">
                         <div
-                          className="h-full bg-[#b5652f] transition-all"
+                          className="h-full bg-[--copper-600] transition-all"
                           style={{ width: `${pct}%` }}
                         />
                       </div>
@@ -441,7 +441,7 @@ export default async function DashboardPage() {
                   className="flex gap-2.5 py-2.5 border-b border-[#eceef0] last:border-0"
                 >
                   <div
-                    className="w-1.5 h-1.5 bg-[#b5652f] shrink-0 mt-[5px]"
+                    className="w-1.5 h-1.5 bg-[--copper-600] shrink-0 mt-[5px]"
                   />
                   <div className="min-w-0">
                     <p className="text-[13px] text-[#21242a] leading-snug">

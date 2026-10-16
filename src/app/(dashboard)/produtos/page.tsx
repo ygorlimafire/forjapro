@@ -49,7 +49,7 @@ export default async function ProdutosPage({ searchParams }: Props) {
             "inline-flex items-center px-3.5 py-1.5 text-[12px] font-semibold transition-colors",
             !category
               ? "bg-[#16181c] text-white"
-              : "border border-[#dde0e3] text-[#6b7178] hover:border-[#b5652f] hover:text-[#16181c]"
+              : "border border-[#dde0e3] text-[#6b7178] hover:border-[--copper-600] hover:text-[#16181c]"
           )}>
             Todas
           </span>
@@ -60,7 +60,7 @@ export default async function ProdutosPage({ searchParams }: Props) {
               "inline-flex items-center px-3.5 py-1.5 text-[12px] font-semibold transition-colors",
               category === cat.id
                 ? "bg-[#16181c] text-white"
-                : "border border-[#dde0e3] text-[#6b7178] hover:border-[#b5652f] hover:text-[#16181c]"
+                : "border border-[#dde0e3] text-[#6b7178] hover:border-[--copper-600] hover:text-[#16181c]"
             )}>
               {cat.name}
             </span>
@@ -76,7 +76,7 @@ export default async function ProdutosPage({ searchParams }: Props) {
             name="q"
             defaultValue={q}
             placeholder="Buscar por nome, SKU..."
-            className="flex-1 max-w-[280px] px-3 py-2 bg-[#f5f6f7] border border-[#dde0e3] text-[13px] text-[#21242a] placeholder:text-[#9ba1a8] outline-none focus:border-[#b5652f] transition-colors"
+            className="flex-1 max-w-[280px] px-3 py-2 bg-[#f5f6f7] border border-[#dde0e3] text-[13px] text-[#21242a] placeholder:text-[#9ba1a8] outline-none focus:border-[--copper-600] transition-colors"
           />
           {category && <input type="hidden" name="category" value={category} />}
           {(q || category) && (
@@ -120,7 +120,7 @@ export default async function ProdutosPage({ searchParams }: Props) {
                   className="hidden sm:grid items-center px-4 py-3.5 text-[14px] hover:bg-[#f5f6f7] transition-colors"
                   style={{ gridTemplateColumns: "2fr 1fr 0.9fr 0.7fr 0.7fr auto" }}
                 >
-                  <Link href={`/produtos/${p.id}`} className="font-semibold text-[#16181c] hover:text-[#b5652f] truncate pr-3">
+                  <Link href={`/produtos/${p.id}`} className="font-semibold text-[#16181c] hover:text-[--copper-600] truncate pr-3">
                     {p.name}
                     <span style={mono} className="block text-[11px] font-normal text-[#9ba1a8]">{p.sku}</span>
                   </Link>

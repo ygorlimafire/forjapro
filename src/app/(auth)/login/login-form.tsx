@@ -23,7 +23,7 @@ type FormData = z.infer<typeof schema>
 const darkInput = cn(
   "h-10 w-full px-3 text-sm outline-none transition-colors disabled:opacity-50",
   "bg-[#16181c] border-[1.5px] border-[#3a3f46] text-[#c2c7cc]",
-  "placeholder:text-[#6b7178] focus:border-[#b5652f]"
+  "placeholder:text-[#6b7178] focus:border-[--copper-600]"
 )
 
 export function LoginForm() {
@@ -70,7 +70,7 @@ export function LoginForm() {
       <div
         className="absolute top-0 right-0 w-7 h-7"
         style={{
-          backgroundColor: "#b5652f",
+          backgroundColor: "var(--copper-600)",
           clipPath: "polygon(100% 0, 100% 100%, 0 0)",
         }}
       />

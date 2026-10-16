@@ -110,9 +110,10 @@
   --radius: 0px;                               /* zero-radius system */
 
   /* ── brand raw hex tokens ── */
-  --copper-600: #b5652f;
-  --copper-700: #93501f;
-  --copper-100: #f7e6d8;
+  --brand: #b5652f;                      /* overridden by layout.tsx from company_settings.primary_color */
+  --copper-600: var(--brand, #b5652f);   /* all brand-color usage chains through here */
+  --copper-700: color-mix(in srgb, var(--brand, #b5652f) 80%, black);
+  --copper-100: color-mix(in srgb, var(--brand, #b5652f) 15%, white);
   --ink-900: #16181c;
   --ink-800: #21242a;
   --steel-600: #6b7178;

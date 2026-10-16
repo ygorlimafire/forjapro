@@ -38,7 +38,7 @@ export function TabNav({ currentTab, currentFrom, currentTo }: Props) {
           className={cn(
             "px-4 py-2.5 font-bold text-[13px] uppercase tracking-[0.02em] border-b-2 -mb-px transition-colors whitespace-nowrap",
             currentTab === t.id
-              ? "border-[#b5652f] text-[#16181c]"
+              ? "border-[--copper-600] text-[#16181c]"
               : "border-transparent text-[#9ba1a8] hover:text-[#16181c]"
           )}
         >

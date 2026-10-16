@@ -42,7 +42,7 @@ function TabLink({ tab, current, children }: { tab: Tab; current: Tab; children:
       className={cn(
         "px-4 py-2.5 font-bold text-[13px] uppercase tracking-[0.02em] border-b-2 -mb-px transition-colors whitespace-nowrap",
         current === tab
-          ? "border-[#b5652f] text-[#16181c]"
+          ? "border-[--copper-600] text-[#16181c]"
           : "border-transparent text-[#9ba1a8] hover:text-[#16181c]"
       )}
     >
@@ -81,7 +81,7 @@ function StatusFilter({ tab, current }: { tab: "receber" | "pagar"; current: str
             "inline-flex items-center px-3.5 py-1.5 text-[12px] font-semibold transition-colors",
             (current ?? "") === s
               ? "bg-[#16181c] text-white"
-              : "border border-[#dde0e3] text-[#6b7178] hover:border-[#b5652f] hover:text-[#16181c]"
+              : "border border-[#dde0e3] text-[#6b7178] hover:border-[--copper-600] hover:text-[#16181c]"
           )}
         >
           {label}

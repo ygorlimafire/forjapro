@@ -50,7 +50,7 @@ export function DateFilter({ currentFrom, currentTo, currentTab }: Props) {
     navigate(toLocalYMD(from), toLocalYMD(to))
   }
 
-  const presetClass = "px-3 py-1.5 text-[12px] font-semibold border border-[#dde0e3] text-[#6b7178] hover:border-[#b5652f] hover:text-[#16181c] transition-colors"
+  const presetClass = "px-3 py-1.5 text-[12px] font-semibold border border-[#dde0e3] text-[#6b7178] hover:border-[--copper-600] hover:text-[#16181c] transition-colors"
 
   return (
     <div className="flex items-center gap-2 flex-wrap">
@@ -59,7 +59,7 @@ export function DateFilter({ currentFrom, currentTo, currentTab }: Props) {
           type="date"
           defaultValue={currentFrom}
           style={{ fontFamily: "'IBM Plex Mono', monospace" }}
-          className="h-8 w-36 text-[12px] border border-[#dde0e3] bg-white px-2 text-[#16181c] outline-none focus:border-[#b5652f] transition-colors"
+          className="h-8 w-36 text-[12px] border border-[#dde0e3] bg-white px-2 text-[#16181c] outline-none focus:border-[--copper-600] transition-colors"
           onChange={(e) => {
             if (e.target.value) navigate(e.target.value, currentTo)
           }}
@@ -69,7 +69,7 @@ export function DateFilter({ currentFrom, currentTo, currentTab }: Props) {
           type="date"
           defaultValue={currentTo}
           style={{ fontFamily: "'IBM Plex Mono', monospace" }}
-          className="h-8 w-36 text-[12px] border border-[#dde0e3] bg-white px-2 text-[#16181c] outline-none focus:border-[#b5652f] transition-colors"
+          className="h-8 w-36 text-[12px] border border-[#dde0e3] bg-white px-2 text-[#16181c] outline-none focus:border-[--copper-600] transition-colors"
           onChange={(e) => {
             if (e.target.value) navigate(currentFrom, e.target.value)
           }}

@@ -48,7 +48,7 @@ export default async function ClientesPage({ searchParams }: Props) {
             name="q"
             defaultValue={q}
             placeholder="Buscar cliente..."
-            className="flex-1 max-w-[280px] px-3 py-2 bg-[#f5f6f7] border border-[#dde0e3] text-[13px] text-[#21242a] placeholder:text-[#9ba1a8] outline-none focus:border-[#b5652f] transition-colors"
+            className="flex-1 max-w-[280px] px-3 py-2 bg-[#f5f6f7] border border-[#dde0e3] text-[13px] text-[#21242a] placeholder:text-[#9ba1a8] outline-none focus:border-[--copper-600] transition-colors"
           />
           {q && (
             <Link href="/clientes" className="text-[12px] font-semibold text-[#6b7178] hover:text-[#16181c]">
@@ -90,7 +90,7 @@ export default async function ClientesPage({ searchParams }: Props) {
                   className="hidden sm:grid items-center px-4 py-3.5 text-[14px] hover:bg-[#f5f6f7] transition-colors"
                   style={{ gridTemplateColumns: "2fr 1fr 1fr 0.7fr auto" }}
                 >
-                  <Link href={`/clientes/${c.id}`} className="font-semibold text-[#16181c] hover:text-[#b5652f] truncate pr-3">
+                  <Link href={`/clientes/${c.id}`} className="font-semibold text-[#16181c] hover:text-[--copper-600] truncate pr-3">
                     {name}
                     {c.tradeName && c.companyName && (
                       <span className="block text-[12px] font-normal text-[#6b7178]">{c.tradeName}</span>

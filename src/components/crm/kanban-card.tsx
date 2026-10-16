@@ -68,7 +68,7 @@ export function KanbanCard({ opportunity, stageId, onCardClick }: KanbanCardProp
             right: 0,
             width: 10,
             height: 10,
-            background: "#b5652f",
+            background: "var(--copper-600)",
             clipPath: "polygon(100% 0, 100% 100%, 0 0)",
           }}
         />
@@ -93,7 +93,7 @@ export function KanbanCard({ opportunity, stageId, onCardClick }: KanbanCardProp
 
         {/* Value */}
         {opportunity.value && (
-          <p style={{ ...mono, fontSize: "14px", color: "#b5652f", fontWeight: 600, paddingLeft: "22px" }}>
+          <p style={{ ...mono, fontSize: "14px", color: "var(--copper-600)", fontWeight: 600, paddingLeft: "22px" }}>
             {formatCurrency(Number(opportunity.value))}
           </p>
         )}
@@ -105,7 +105,7 @@ export function KanbanCard({ opportunity, stageId, onCardClick }: KanbanCardProp
               <div
                 style={{
                   height: "100%",
-                  background: "#b5652f",
+                  background: "var(--copper-600)",
                   width: `${opportunity.probability}%`,
                   transition: "width 0.3s",
                 }}
