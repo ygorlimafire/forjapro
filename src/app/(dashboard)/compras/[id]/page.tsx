@@ -6,6 +6,7 @@ import { formatCurrency, formatDate } from "@/lib/utils"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ArrowLeft, ImageIcon, AlertTriangle, CheckCircle2 } from "lucide-react"
 import { PurchaseStatusActions } from "@/components/purchases/purchase-status-actions"
+import { PurchasePdfButton } from "@/components/purchases/purchase-pdf-button"
 import type { PurchaseOrderStatus, StockAlertStatus, PayableStatus } from "@prisma/client"
 import type { PageProps } from "@/types"
 
@@ -84,6 +85,7 @@ export default async function CompraDetailPage({ params }: PageProps) {
             {" "}· Criado em {formatDate(po.createdAt)}
           </p>
         </div>
+        <PurchasePdfButton purchaseOrderId={po.id} />
       </div>
 
       {/* Status actions */}
