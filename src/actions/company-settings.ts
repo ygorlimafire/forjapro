@@ -62,7 +62,7 @@ export async function saveCompanyBranding(data: unknown): Promise<ActionResult<v
     if (existing) {
       await prisma.companySettings.update({ where: { id: existing.id }, data: payload })
     } else {
-      await prisma.companySettings.create({ data: { ...payload, onboardingCompleted: false } })
+      await prisma.companySettings.create({ data: payload })
     }
     revalidateTag(SETTINGS_CACHE_TAG, {})
     return { success: true, data: undefined }
@@ -71,25 +71,6 @@ export async function saveCompanyBranding(data: unknown): Promise<ActionResult<v
   }
 }
 
-export async function completeOnboarding(): Promise<ActionResult<void>> {
-  const session = await auth()
-  if (!session?.user) return { success: false, error: "Não autorizado" }
-  if (session.user.roleName !== "ADMIN") return { success: false, error: "Sem permissão" }
-
-  const existing = await prisma.companySettings.findFirst()
-  if (!existing) return { success: false, error: "Configurações não encontradas" }
-
-  try {
-    await prisma.companySettings.update({
-      where: { id: existing.id },
-      data: { onboardingCompleted: true },
-    })
-    revalidateTag(SETTINGS_CACHE_TAG, {})
-    return { success: true, data: undefined }
-  } catch (err) {
-    return { success: false, error: err instanceof Error ? err.message : String(err) }
-  }
-}
 
 export async function saveBankInfo(data: Record<string, string>): Promise<ActionResult<void>> {
   const session = await auth()
